@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
 <title>網站負載測試工具</title>
 
 <style>
@@ -12,48 +13,56 @@
 
 body {
     margin: 0;
-    padding: 30px 15px;
-    background: #f5f7fa;
+    padding: 25px 15px;
+    background: #f4f6f8;
     font-family: Arial, sans-serif;
 }
 
 .container {
-    max-width: 650px;
+    max-width: 700px;
     margin: auto;
-    background: white;
+    background: #fff;
     padding: 25px;
-    border-radius: 15px;
-    box-shadow: 0 5px 20px rgba(0,0,0,.08);
+    border-radius: 16px;
+    box-shadow: 0 5px 25px rgba(0,0,0,.08);
 }
 
 h2 {
     margin-top: 0;
 }
 
+label {
+    display: block;
+    margin-top: 15px;
+    font-weight: bold;
+}
+
 input {
     width: 100%;
-    padding: 12px;
-    margin: 7px 0 15px;
+    padding: 11px;
+    margin-top: 6px;
     border: 1px solid #ccc;
     border-radius: 8px;
     font-size: 15px;
 }
 
 button {
+    margin-top: 20px;
     padding: 12px 20px;
     border: 0;
     border-radius: 8px;
     cursor: pointer;
-    margin-right: 8px;
+    font-size: 15px;
 }
 
-.start {
+#start {
     background: #222;
     color: white;
 }
 
-.stop {
+#stop {
     background: #ddd;
+    margin-left: 8px;
 }
 
 .stats {
@@ -61,22 +70,22 @@ button {
     padding: 15px;
     background: #f5f5f5;
     border-radius: 10px;
-    line-height: 1.8;
+    line-height: 2;
 }
 
 .progress {
+    margin-top: 20px;
     width: 100%;
     height: 12px;
     background: #ddd;
-    border-radius: 10px;
+    border-radius: 20px;
     overflow: hidden;
-    margin-top: 15px;
 }
 
-.progress-bar {
+.progressBar {
     height: 100%;
     width: 0%;
-    background: #333;
+    background: #222;
     transition: width .1s;
 }
 
@@ -100,39 +109,83 @@ button {
     placeholder="https://example.com"
 >
 
-<label>最大請求次數</label>
+<label>最大請求數</label>
 <input
     id="maxRequests"
     type="number"
-    value="100"
     min="1"
+    max="10000"
+    value="1000"
 >
 
 <label>測試時間（秒）</label>
 <input
     id="duration"
     type="number"
-    value="10"
     min="1"
+    max="300"
+    value="30"
 >
 
-<button class="start" onclick="startTest()">
+<label>併發數</label>
+<input
+    id="concurrency"
+    type="number"
+    min="1"
+    max="50"
+    value="10"
+>
+
+<label>每批間隔（毫秒）</label>
+<input
+    id="interval"
+    type="number"
+    min="0"
+    max="10000"
+    value="100"
+>
+
+<br>
+
+<button id="start" onclick="startTest()">
 開始測試
 </button>
 
-<button class="stop" onclick="stopTest()">
+<button id="stop" onclick="stopTest()">
 停止測試
 </button>
 
 <div class="progress">
-    <div id="progressBar" class="progress-bar"></div>
+    <div id="progressBar" class="progressBar"></div>
 </div>
 
 <div class="stats">
-    <div>已發送：<span id="sent">0</span></div>
-    <div>成功：<span id="success">0</span></div>
-    <div>失敗：<span id="failed">0</span></div>
-    <div>剩餘時間：<span id="remaining">0</span> 秒</div>
+
+    <div>
+        已發送：
+        <span id="sent">0</span>
+    </div>
+
+    <div>
+        成功：
+        <span id="success">0</span>
+    </div>
+
+    <div>
+        失敗：
+        <span id="failed">0</span>
+    </div>
+
+    <div>
+        RPS：
+        <span id="rps">0</span>
+    </div>
+
+    <div>
+        剩餘時間：
+        <span id="remaining">0</span> 秒
+    </div>
+
 </div>
 
 <div id="status">
@@ -142,29 +195,47 @@ button {
 </div>
 
 <script>
+
 let running = false;
+
 let sent = 0;
 let success = 0;
 let failed = 0;
+
+let startTime = 0;
+let endTime = 0;
 
 async function startTest() {
 
     if (running) return;
 
-    const url = document.getElementById("url").value.trim();
+    const url =
+        document.getElementById("url").value.trim();
+
     const maxRequests =
         Number(document.getElementById("maxRequests").value);
 
     const duration =
         Number(document.getElementById("duration").value);
 
+    const concurrency =
+        Number(document.getElementById("concurrency").value);
+
+    const interval =
+        Number(document.getElementById("interval").value);
+
     if (!url) {
-        alert("請輸入網址");
+        alert("請輸入測試網址");
         return;
     }
 
-    if (maxRequests <= 0 || duration <= 0) {
-        alert("請輸入有效的數值");
+    if (
+        maxRequests <= 0 ||
+        duration <= 0 ||
+        concurrency <= 0 ||
+        interval < 0
+    ) {
+        alert("請確認測試參數");
         return;
     }
 
@@ -174,10 +245,16 @@ async function startTest() {
     success = 0;
     failed = 0;
 
-    const startTime = Date.now();
-    const endTime = startTime + duration * 1000;
+    startTime = Date.now();
 
-    updateUI(duration);
+    endTime =
+        startTime +
+        duration * 1000;
+
+    document.getElementById("status").textContent =
+        "測試進行中...";
+
+    updateUI();
 
     while (
         running &&
@@ -185,47 +262,73 @@ async function startTest() {
         Date.now() < endTime
     ) {
 
-        try {
+        const batchSize =
+            Math.min(
+                concurrency,
+                maxRequests - sent
+            );
 
-            const response = await fetch(url, {
+        const requests = [];
+
+        for (let i = 0; i < batchSize; i++) {
+
+            requests.push(sendRequest(url));
+
+        }
+
+        await Promise.all(requests);
+
+        updateUI();
+
+        if (!running) break;
+
+        if (interval > 0) {
+
+            await sleep(interval);
+
+        }
+    }
+
+    running = false;
+
+    updateUI();
+
+    document.getElementById("status").textContent =
+        "測試完成";
+}
+
+
+async function sendRequest(url) {
+
+    if (!running) return;
+
+    sent++;
+
+    try {
+
+        const response =
+            await fetch(url, {
                 method: "GET",
                 cache: "no-store"
             });
 
-            sent++;
+        if (response.ok) {
 
-            if (response.ok) {
-                success++;
-            } else {
-                failed++;
-            }
+            success++;
 
-        } catch (error) {
+        } else {
 
-            sent++;
             failed++;
 
         }
 
-        updateUI(
-            Math.max(
-                0,
-                (endTime - Date.now()) / 1000
-            )
-        );
-    }
+    } catch (error) {
 
-    if (running) {
-        running = false;
-        document.getElementById("status").textContent =
-            "測試完成";
-    } else {
-        document.getElementById("status").textContent =
-            "測試已停止";
-    }
+        failed++;
 
-    updateUI(0);
+    }
 }
+
 
 function stopTest() {
 
@@ -234,10 +337,50 @@ function stopTest() {
     running = false;
 
     document.getElementById("status").textContent =
-        "正在停止...";
+        "已停止測試";
+
+    updateUI();
 }
 
-function updateUI(remaining) {
+
+function sleep(ms) {
+
+    return new Promise(resolve => {
+
+        setTimeout(resolve, ms);
+
+    });
+
+}
+
+
+function updateUI() {
+
+    const elapsed =
+        Math.max(
+            0.001,
+            (Date.now() - startTime) / 1000
+        );
+
+    const remaining =
+        Math.max(
+            0,
+            (endTime - Date.now()) / 1000
+        );
+
+    const rps =
+        sent / elapsed;
+
+    const maxRequests =
+        Number(
+            document.getElementById("maxRequests").value
+        );
+
+    const progress =
+        Math.min(
+            100,
+            (sent / maxRequests) * 100
+        );
 
     document.getElementById("sent").textContent =
         sent;
@@ -248,21 +391,16 @@ function updateUI(remaining) {
     document.getElementById("failed").textContent =
         failed;
 
+    document.getElementById("rps").textContent =
+        rps.toFixed(2);
+
     document.getElementById("remaining").textContent =
         remaining.toFixed(1);
 
-    const maxRequests =
-        Number(document.getElementById("maxRequests").value);
-
-    const progress =
-        Math.min(100, (sent / maxRequests) * 100);
-
     document.getElementById("progressBar").style.width =
         progress + "%";
-
-    document.getElementById("status").textContent =
-        running ? "測試進行中..." : "測試已停止";
 }
+
 </script>
 
 </body>
