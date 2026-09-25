@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>網站負載測試工具</title>
+<title>Web Scraper｜網站公開資訊分析器</title>
 
 <style>
 * {
@@ -12,150 +12,160 @@
 
 body {
     margin: 0;
-    padding: 25px;
-    font-family: Arial, sans-serif;
+    padding: 25px 15px;
     background: #f4f6f8;
-    color: #222;
+    font-family: Arial, "Noto Sans TC", sans-serif;
+    color: #1f2937;
 }
 
 .container {
-    max-width: 1000px;
+    width: 100%;
+    max-width: 1100px;
     margin: auto;
 }
 
 h1 {
     text-align: center;
+    margin-bottom: 8px;
 }
 
-.card {
-    background: white;
-    padding: 20px;
-    border-radius: 14px;
-    margin-bottom: 15px;
-    box-shadow: 0 3px 12px rgba(0,0,0,.08);
+.subtitle {
+    text-align: center;
+    color: #6b7280;
+    margin-bottom: 25px;
 }
 
-label {
-    display: block;
-    margin-top: 12px;
-    font-weight: bold;
+.search {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
 }
 
 input {
-    width: 100%;
-    padding: 12px;
-    margin-top: 6px;
-    border: 1px solid #ccc;
+    flex: 1;
+    padding: 14px;
+    border: 1px solid #d1d5db;
     border-radius: 8px;
     font-size: 16px;
+    outline: none;
+}
+
+input:focus {
+    border-color: #2563eb;
 }
 
 button {
-    width: 100%;
-    padding: 14px;
-    margin-top: 18px;
+    padding: 14px 25px;
     border: 0;
     border-radius: 8px;
-    background: #111;
+    background: #2563eb;
     color: white;
     font-size: 16px;
     cursor: pointer;
 }
 
+button:hover {
+    background: #1d4ed8;
+}
+
 button:disabled {
-    background: #999;
+    background: #9ca3af;
+    cursor: not-allowed;
 }
 
-.status {
-    text-align: center;
-    font-weight: bold;
+.card {
+    background: white;
+    padding: 20px;
     margin: 15px 0;
-}
-
-.progress {
-    height: 12px;
-    background: #ddd;
-    border-radius: 20px;
-    overflow: hidden;
-}
-
-.bar {
-    height: 100%;
-    width: 0%;
-    background: #111;
-    transition: width .2s;
+    border-radius: 10px;
+    box-shadow: 0 3px 12px rgba(0, 0, 0, .07);
 }
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
+    grid-template-columns:
+        repeat(auto-fit, minmax(220px, 1fr));
+    gap: 12px;
 }
 
-.stat {
-    padding: 15px;
-    background: #f1f3f5;
-    border-radius: 10px;
+.item {
+    padding: 14px;
+    background: #f3f4f6;
+    border-radius: 8px;
+    word-break: break-word;
 }
 
-.stat b {
+.item strong {
     display: block;
-    font-size: 21px;
-    margin-top: 5px;
+    margin-bottom: 7px;
+}
+
+pre {
+    background: #111827;
+    color: #e5e7eb;
+    padding: 15px;
+    border-radius: 8px;
+    overflow: auto;
+    max-height: 600px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.table-wrapper {
+    overflow-x: auto;
+    max-height: 500px;
+    overflow-y: auto;
 }
 
 table {
     width: 100%;
     border-collapse: collapse;
-    margin-top: 15px;
-    font-size: 14px;
 }
 
 th,
 td {
     padding: 10px;
-    border-bottom: 1px solid #ddd;
-    text-align: center;
+    border-bottom: 1px solid #e5e7eb;
+    text-align: left;
+    vertical-align: top;
+    word-break: break-word;
 }
 
-.warning {
-    padding: 15px;
-    background: #fff3cd;
-    border-radius: 10px;
-    margin-top: 15px;
+th {
+    background: #f3f4f6;
 }
 
-.good {
+.status {
     padding: 15px;
-    background: #d1e7dd;
-    border-radius: 10px;
-    margin-top: 15px;
+    border-radius: 8px;
+    background: #eef2ff;
 }
 
 .error {
-    padding: 15px;
-    background: #f8d7da;
-    border-radius: 10px;
-    margin-top: 15px;
+    background: #fee2e2;
+    color: #991b1b;
 }
 
-pre {
-    white-space: pre-wrap;
-    word-break: break-all;
-    background: #111;
-    color: #eee;
-    padding: 15px;
-    border-radius: 8px;
-    overflow-x: auto;
+.loading {
+    text-align: center;
+    padding: 30px;
 }
 
-@media (max-width: 700px) {
-    .grid {
-        grid-template-columns: repeat(2, 1fr);
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 5px;
+    background: #e5e7eb;
+    font-size: 13px;
+}
+
+@media (max-width: 600px) {
+    .search {
+        flex-direction: column;
     }
 
-    table {
-        font-size: 12px;
+    button {
+        width: 100%;
     }
 }
 </style>
@@ -165,636 +175,813 @@ pre {
 
 <div class="container">
 
-<h1>網站負載測試工具</h1>
+<h1>Web Scraper</h1>
 
-<div class="card">
+<div class="subtitle">
+    網站公開資訊分析器
+</div>
 
-<label>測試網址</label>
-<input id="url" value="https://ssjh.tc.edu.tw/">
+<div class="search">
 
-<label>開始並發數</label>
-<input id="start" type="number" value="5" min="1" max="100">
+    <input
+        id="url"
+        type="url"
+        placeholder="https://example.com"
+    >
 
-<label>每階段增加</label>
-<input id="step" type="number" value="5" min="1" max="50">
-
-<label>最高並發數</label>
-<input id="max" type="number" value="50" min="1" max="100">
-
-<label>每階段測試秒數</label>
-<input id="seconds" type="number" value="5" min="1" max="30">
-
-<button id="startBtn" onclick="startTest()">開始測試</button>
+    <button id="scanButton" onclick="scan()">
+        開始爬取
+    </button>
 
 </div>
 
-<div class="card">
-
-<div class="status" id="status">尚未開始</div>
-
-<div class="progress">
-<div class="bar" id="bar"></div>
-</div>
-
-</div>
-
-<div class="card">
-
-<h2>即時結果</h2>
-
-<div class="grid">
-
-<div class="stat">
-總請求
-<b id="total">0</b>
-</div>
-
-<div class="stat">
-成功
-<b id="success">0</b>
-</div>
-
-<div class="stat">
-失敗
-<b id="fail">0</b>
-</div>
-
-<div class="stat">
-RPS
-<b id="rps">0</b>
-</div>
-
-<div class="stat">
-平均延遲
-<b id="avg">0 ms</b>
-</div>
-
-<div class="stat">
-P95
-<b id="p95">0 ms</b>
-</div>
-
-</div>
-
-<div id="message"></div>
-
-</div>
-
-<div class="card">
-
-<h2>詳細測試結果</h2>
-
-<table>
-
-<thead>
-<tr>
-<th>並發</th>
-<th>請求</th>
-<th>成功</th>
-<th>失敗</th>
-<th>RPS</th>
-<th>平均</th>
-<th>P50</th>
-<th>P95</th>
-<th>P99</th>
-<th>最快</th>
-<th>最慢</th>
-<th>狀態</th>
-</tr>
-</thead>
-
-<tbody id="results"></tbody>
-
-</table>
-
-</div>
-
-<div class="card">
-
-<h2>HTTP Status 統計</h2>
-
-<pre id="statusReport">尚無資料</pre>
-
-</div>
-
-<div class="card">
-
-<h2>錯誤統計</h2>
-
-<pre id="errorReport">尚無資料</pre>
-
-</div>
-
-<div class="card">
-
-<h2>測試資訊</h2>
-
-<pre id="testInfo">尚未開始</pre>
-
-</div>
+<div id="result"></div>
 
 </div>
 
 <script>
 
-let running = false;
+async function scan() {
 
-let allStatus = {};
+    const input = document.getElementById("url");
+    const button = document.getElementById("scanButton");
+    const result = document.getElementById("result");
 
-let allErrors = {};
+    let targetURL = input.value.trim();
 
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
+    if (!targetURL) {
 
-function percentile(values, p) {
+        showError("請輸入網站網址。");
 
-    if (!values.length) {
-        return 0;
+        return;
     }
 
-    const sorted = [...values].sort((a, b) => a - b);
+    if (!/^https?:\/\//i.test(targetURL)) {
 
-    const index =
-        Math.ceil(sorted.length * p) - 1;
+        targetURL = "https://" + targetURL;
+    }
 
-    return sorted[Math.max(0, index)];
-}
+    try {
+        new URL(targetURL);
+    } catch {
 
-function addStatus(status) {
+        showError("網址格式不正確。");
 
-    allStatus[status] =
-        (allStatus[status] || 0) + 1;
+        return;
+    }
 
-}
+    button.disabled = true;
 
-function addError(error) {
-
-    allErrors[error] =
-        (allErrors[error] || 0) + 1;
-
-}
-
-function updateReports() {
-
-    const statusLines =
-        Object.entries(allStatus)
-        .map(([key, value]) =>
-            key + " : " + value
-        );
-
-    const errorLines =
-        Object.entries(allErrors)
-        .map(([key, value]) =>
-            key + " : " + value
-        );
-
-    document.getElementById("statusReport").textContent =
-        statusLines.length
-        ? statusLines.join("\n")
-        : "尚無資料";
-
-    document.getElementById("errorReport").textContent =
-        errorLines.length
-        ? errorLines.join("\n")
-        : "尚無錯誤";
-
-}
-
-async function request(url) {
-
-    const startTime = performance.now();
-
-    const controller =
-        new AbortController();
-
-    const timeout =
-        setTimeout(() => {
-            controller.abort();
-        }, 10000);
-
-    const testURL =
-        url +
-        (url.includes("?") ? "&" : "?") +
-        "_loadtest=" +
-        Date.now() +
-        Math.random().toString(36).slice(2);
+    result.innerHTML = `
+        <div class="card loading">
+            正在爬取網站公開資料...
+        </div>
+    `;
 
     try {
 
+        const proxyURL =
+            "https://api.allorigins.win/raw?url=" +
+            encodeURIComponent(targetURL);
+
         const response =
-            await fetch(testURL, {
-                method: "GET",
-                cache: "no-store",
-                signal: controller.signal
-            });
+            await fetch(proxyURL);
 
-        clearTimeout(timeout);
+        if (!response.ok) {
 
-        const time =
-            performance.now() - startTime;
+            throw new Error(
+                `HTTP ${response.status}`
+            );
+        }
 
-        addStatus(response.status);
+        const html =
+            await response.text();
 
-        return {
-            success: response.ok,
-            status: response.status,
-            time,
-            error: null
-        };
+        if (!html.trim()) {
+
+            throw new Error(
+                "網站沒有回傳 HTML"
+            );
+        }
+
+        const data =
+            parseHTML(
+                html,
+                targetURL
+            );
+
+        render(data, html);
 
     } catch (error) {
 
-        clearTimeout(timeout);
+        showError(`
+            無法取得網站資料。
 
-        const time =
-            performance.now() - startTime;
+            <br><br>
 
-        let type = "Network / CORS Error";
+            可能原因：
+            <br>
+            • 網站拒絕請求
+            <br>
+            • Proxy 無法取得該網站
+            <br>
+            • 網站需要登入
+            <br>
+            • 網站使用特殊防爬機制
+            <br>
+            • 網站暫時無法連線
+        `);
 
-        if (error.name === "AbortError") {
-            type = "Timeout";
-        }
+    } finally {
 
-        addError(type);
-
-        return {
-            success: false,
-            status: "ERROR",
-            time,
-            error: type
-        };
-
+        button.disabled = false;
     }
-
 }
 
-async function runStage(url, concurrency, seconds) {
 
-    const startTime =
-        performance.now();
+/**
+ * 解析網站 HTML。
+ */
+function parseHTML(html, baseURL) {
 
-    const endTime =
-        startTime + seconds * 1000;
+    const parser =
+        new DOMParser();
 
-    const times = [];
+    const doc =
+        parser.parseFromString(
+            html,
+            "text/html"
+        );
 
-    let total = 0;
-    let success = 0;
-    let fail = 0;
+    const absoluteURL = value => {
 
-    async function worker() {
+        try {
 
-        while (
-            performance.now() < endTime &&
-            running
-        ) {
+            return new URL(
+                value,
+                baseURL
+            ).href;
 
-            const result =
-                await request(url);
+        } catch {
 
-            total++;
-
-            times.push(result.time);
-
-            if (result.success) {
-                success++;
-            } else {
-                fail++;
-            }
-
-            updateLive(
-                total,
-                success,
-                fail,
-                times
-            );
-
-            updateReports();
-
+            return value;
         }
-
-    }
-
-    const workers = [];
-
-    for (
-        let i = 0;
-        i < concurrency;
-        i++
-    ) {
-        workers.push(worker());
-    }
-
-    await Promise.all(workers);
-
-    const elapsed =
-        (performance.now() - startTime) / 1000;
-
-    const average =
-        times.length
-        ? times.reduce((a, b) => a + b, 0)
-          / times.length
-        : 0;
-
-    const p50 =
-        percentile(times, .50);
-
-    const p95 =
-        percentile(times, .95);
-
-    const p99 =
-        percentile(times, .99);
-
-    const fastest =
-        times.length
-        ? Math.min(...times)
-        : 0;
-
-    const slowest =
-        times.length
-        ? Math.max(...times)
-        : 0;
-
-    const rps =
-        total / elapsed;
-
-    return {
-        concurrency,
-        total,
-        success,
-        fail,
-        average,
-        p50,
-        p95,
-        p99,
-        fastest,
-        slowest,
-        rps
     };
 
-}
+    const meta = name => {
 
-function updateLive(
-    total,
-    success,
-    fail,
-    times
-) {
-
-    document.getElementById("total").textContent =
-        total;
-
-    document.getElementById("success").textContent =
-        success;
-
-    document.getElementById("fail").textContent =
-        fail;
-
-    if (!times.length) {
-        return;
-    }
-
-    const average =
-        times.reduce((a, b) => a + b, 0)
-        / times.length;
-
-    const p95 =
-        percentile(times, .95);
-
-    document.getElementById("avg").textContent =
-        Math.round(average) + " ms";
-
-    document.getElementById("p95").textContent =
-        Math.round(p95) + " ms";
-
-}
-
-function addResult(result, state) {
-
-    const row =
-        document.createElement("tr");
-
-    row.innerHTML = `
-        <td>${result.concurrency}</td>
-        <td>${result.total}</td>
-        <td>${result.success}</td>
-        <td>${result.fail}</td>
-        <td>${result.rps.toFixed(2)}</td>
-        <td>${Math.round(result.average)} ms</td>
-        <td>${Math.round(result.p50)} ms</td>
-        <td>${Math.round(result.p95)} ms</td>
-        <td>${Math.round(result.p99)} ms</td>
-        <td>${Math.round(result.fastest)} ms</td>
-        <td>${Math.round(result.slowest)} ms</td>
-        <td>${state}</td>
-    `;
-
-    document
-        .getElementById("results")
-        .appendChild(row);
-
-}
-
-async function startTest() {
-
-    if (running) {
-        return;
-    }
-
-    const url =
-        document.getElementById("url")
-        .value
-        .trim();
-
-    const start =
-        Number(
-            document.getElementById("start").value
-        );
-
-    const step =
-        Number(
-            document.getElementById("step").value
-        );
-
-    const max =
-        Number(
-            document.getElementById("max").value
-        );
-
-    const seconds =
-        Number(
-            document.getElementById("seconds").value
-        );
-
-    if (!url) {
-        alert("請輸入網址");
-        return;
-    }
-
-    if (
-        start < 1 ||
-        step < 1 ||
-        max < start ||
-        seconds < 1
-    ) {
-        alert("測試參數不正確");
-        return;
-    }
-
-    running = true;
-
-    allStatus = {};
-    allErrors = {};
-
-    document.getElementById("startBtn")
-        .disabled = true;
-
-    document.getElementById("results")
-        .innerHTML = "";
-
-    document.getElementById("message")
-        .innerHTML = "";
-
-    document.getElementById("bar")
-        .style.width = "0%";
-
-    document.getElementById("total")
-        .textContent = "0";
-
-    document.getElementById("success")
-        .textContent = "0";
-
-    document.getElementById("fail")
-        .textContent = "0";
-
-    document.getElementById("rps")
-        .textContent = "0";
-
-    document.getElementById("avg")
-        .textContent = "0 ms";
-
-    document.getElementById("p95")
-        .textContent = "0 ms";
-
-    document.getElementById("testInfo")
-        .textContent =
-        "測試網址：\n" +
-        url +
-        "\n\n開始並發：" +
-        start +
-        "\n每階段增加：" +
-        step +
-        "\n最高並發：" +
-        max +
-        "\n每階段：" +
-        seconds +
-        " 秒";
-
-    let previousP95 = 0;
-
-    let detected = false;
-
-    for (
-        let concurrency = start;
-        concurrency <= max && running;
-        concurrency += step
-    ) {
-
-        document.getElementById("status")
-            .textContent =
-            "正在測試 " +
-            concurrency +
-            " 個並發";
-
-        const result =
-            await runStage(
-                url,
-                concurrency,
-                seconds
-            );
-
-        const errorRate =
-            result.total
-            ? result.fail / result.total
-            : 0;
-
-        let state = "正常";
-
-        if (
-            errorRate >= .10 ||
-            result.p95 >= 3000 ||
-            (
-                previousP95 > 0 &&
-                result.p95 >= previousP95 * 2
+        return doc
+            .querySelector(
+                `meta[name="${name}"]`
             )
-        ) {
+            ?.getAttribute("content") || "";
+    };
 
-            state = "開始退化";
-            detected = true;
+    const property = name => {
 
-        }
+        return doc
+            .querySelector(
+                `meta[property="${name}"]`
+            )
+            ?.getAttribute("content") || "";
+    };
 
-        addResult(result, state);
 
-        document.getElementById("rps")
-            .textContent =
-            result.rps.toFixed(2);
+    const links =
+        [...doc.querySelectorAll("a")]
+        .map(a => ({
+            text: a.innerText.trim(),
+            url: absoluteURL(
+                a.getAttribute("href") || ""
+            )
+        }))
+        .filter(item => item.url);
 
-        const progress =
-            Math.min(
-                100,
-                concurrency / max * 100
-            );
 
-        document.getElementById("bar")
-            .style.width =
-            progress + "%";
+    const images =
+        [...doc.querySelectorAll("img")]
+        .map(img => ({
+            url: absoluteURL(
+                img.getAttribute("src") || ""
+            ),
+            alt: img.getAttribute("alt") || "",
+            width: img.getAttribute("width") || "",
+            height: img.getAttribute("height") || ""
+        }));
 
-        previousP95 =
-            result.p95;
 
-        if (detected) {
+    const scripts =
+        [...doc.querySelectorAll("script[src]")]
+        .map(script =>
+            absoluteURL(
+                script.getAttribute("src")
+            )
+        );
 
-            document.getElementById("message")
-                .innerHTML =
-                `<div class="warning">
-                    在 <b>${concurrency}</b>
-                    個並發時開始出現明顯退化。
-                    <br><br>
-                    這代表本次瀏覽器測試觀察到延遲或錯誤率明顯增加，
-                    不代表伺服器一定已經完全停止服務。
-                </div>`;
 
-            break;
-        }
+    const styles =
+        [...doc.querySelectorAll(
+            'link[rel="stylesheet"]'
+        )]
+        .map(link =>
+            absoluteURL(
+                link.getAttribute("href")
+            )
+        );
 
-        await sleep(500);
 
+    const headings =
+        [...doc.querySelectorAll(
+            "h1,h2,h3,h4,h5,h6"
+        )]
+        .map(element => ({
+            tag: element.tagName,
+            text: element.innerText.trim()
+        }))
+        .filter(item => item.text);
+
+
+    const forms =
+        [...doc.querySelectorAll("form")]
+        .map(form => ({
+            method:
+                (
+                    form.getAttribute("method")
+                    || "GET"
+                ).toUpperCase(),
+
+            action:
+                absoluteURL(
+                    form.getAttribute("action")
+                    || baseURL
+                )
+        }));
+
+
+    const buttons =
+        [...doc.querySelectorAll("button")]
+        .map(button =>
+            button.innerText.trim()
+        )
+        .filter(Boolean);
+
+
+    const text =
+        doc.body?.innerText
+        ?.replace(/\s+/g, " ")
+        .trim() || "";
+
+
+    const favicon =
+        doc.querySelector(
+            'link[rel~="icon"]'
+        );
+
+
+    return {
+
+        title:
+            doc.title,
+
+        description:
+            meta("description"),
+
+        keywords:
+            meta("keywords"),
+
+        author:
+            meta("author"),
+
+        robots:
+            meta("robots"),
+
+        language:
+            doc.documentElement.lang,
+
+        charset:
+            doc.characterSet,
+
+        canonical:
+            doc.querySelector(
+                'link[rel="canonical"]'
+            )?.href || "",
+
+        favicon:
+            favicon
+                ? absoluteURL(
+                    favicon.getAttribute("href")
+                )
+                : "",
+
+        openGraph: {
+
+            title:
+                property("og:title"),
+
+            description:
+                property("og:description"),
+
+            image:
+                absoluteURL(
+                    property("og:image")
+                ),
+
+            url:
+                property("og:url"),
+
+            type:
+                property("og:type")
+        },
+
+        links,
+
+        images,
+
+        scripts,
+
+        styles,
+
+        headings,
+
+        forms,
+
+        buttons,
+
+        textLength:
+            text.length,
+
+        htmlLength:
+            new Blob([html]).size
+    };
+}
+
+
+/**
+ * 顯示結果。
+ */
+function render(data, html) {
+
+    const result =
+        document.getElementById("result");
+
+    result.innerHTML = `
+
+        <div class="card">
+
+            <h2>基本資訊</h2>
+
+            <div class="grid">
+
+                ${item(
+                    "Title",
+                    data.title
+                )}
+
+                ${item(
+                    "Description",
+                    data.description
+                )}
+
+                ${item(
+                    "Language",
+                    data.language
+                )}
+
+                ${item(
+                    "Charset",
+                    data.charset
+                )}
+
+                ${item(
+                    "HTML 大小",
+                    formatBytes(data.htmlLength)
+                )}
+
+                ${item(
+                    "文字長度",
+                    data.textLength
+                )}
+
+                ${item(
+                    "連結數量",
+                    data.links.length
+                )}
+
+                ${item(
+                    "圖片數量",
+                    data.images.length
+                )}
+
+                ${item(
+                    "JavaScript",
+                    data.scripts.length
+                )}
+
+                ${item(
+                    "CSS",
+                    data.styles.length
+                )}
+
+                ${item(
+                    "Form",
+                    data.forms.length
+                )}
+
+                ${item(
+                    "Button",
+                    data.buttons.length
+                )}
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <h2>SEO / Meta</h2>
+
+            <div class="grid">
+
+                ${item(
+                    "Description",
+                    data.description
+                )}
+
+                ${item(
+                    "Keywords",
+                    data.keywords
+                )}
+
+                ${item(
+                    "Author",
+                    data.author
+                )}
+
+                ${item(
+                    "Robots",
+                    data.robots
+                )}
+
+                ${item(
+                    "Canonical",
+                    data.canonical
+                )}
+
+                ${item(
+                    "Favicon",
+                    data.favicon
+                )}
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <h2>Open Graph</h2>
+
+            <div class="grid">
+
+                ${item(
+                    "og:title",
+                    data.openGraph.title
+                )}
+
+                ${item(
+                    "og:description",
+                    data.openGraph.description
+                )}
+
+                ${item(
+                    "og:image",
+                    data.openGraph.image
+                )}
+
+                ${item(
+                    "og:url",
+                    data.openGraph.url
+                )}
+
+                ${item(
+                    "og:type",
+                    data.openGraph.type
+                )}
+
+            </div>
+
+        </div>
+
+
+        <div class="card">
+
+            <h2>標題結構</h2>
+
+            ${
+                data.headings.length
+
+                ? data.headings.map(h => `
+                    <p>
+                        <span class="badge">
+                            ${h.tag}
+                        </span>
+
+                        ${escapeHTML(h.text)}
+                    </p>
+                `).join("")
+
+                : "沒有找到 H1～H6"
+            }
+
+        </div>
+
+
+        <div class="card">
+
+            <h2>
+                公開連結
+                (${data.links.length})
+            </h2>
+
+            ${renderLinks(data.links)}
+
+        </div>
+
+
+        <div class="card">
+
+            <h2>
+                圖片
+                (${data.images.length})
+            </h2>
+
+            ${renderImages(data.images)}
+
+        </div>
+
+
+        <div class="card">
+
+            <h2>
+                JavaScript
+                (${data.scripts.length})
+            </h2>
+
+            ${renderList(data.scripts)}
+
+        </div>
+
+
+        <div class="card">
+
+            <h2>
+                CSS
+                (${data.styles.length})
+            </h2>
+
+            ${renderList(data.styles)}
+
+        </div>
+
+
+        <div class="card">
+
+            <h2>
+                Form
+                (${data.forms.length})
+            </h2>
+
+            ${renderForms(data.forms)}
+
+        </div>
+
+
+        <div class="card">
+
+            <h2>HTML 原始碼</h2>
+
+            <pre>${escapeHTML(html)}</pre>
+
+        </div>
+    `;
+}
+
+
+function renderLinks(links) {
+
+    if (!links.length) {
+        return "沒有找到公開連結。";
     }
 
-    running = false;
+    return `
+        <div class="table-wrapper">
 
-    document.getElementById("startBtn")
-        .disabled = false;
+            <table>
 
-    document.getElementById("status")
-        .textContent =
-        "測試完成";
+                <thead>
+                    <tr>
+                        <th>文字</th>
+                        <th>URL</th>
+                    </tr>
+                </thead>
 
-    if (!detected) {
+                <tbody>
 
-        document.getElementById("message")
-            .innerHTML =
-            `<div class="good">
-                在設定的最高並發數內，
-                本次測試沒有偵測到明顯退化。
-            </div>`;
+                    ${links.map(link => `
+                        <tr>
 
+                            <td>
+                                ${escapeHTML(link.text)}
+                            </td>
+
+                            <td>
+                                ${escapeHTML(link.url)}
+                            </td>
+
+                        </tr>
+                    `).join("")}
+
+                </tbody>
+
+            </table>
+
+        </div>
+    `;
+}
+
+
+function renderImages(images) {
+
+    if (!images.length) {
+        return "沒有找到圖片。";
     }
 
-    updateReports();
+    return `
+        <div class="table-wrapper">
 
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>圖片 URL</th>
+                        <th>Alt</th>
+                        <th>尺寸</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    ${images.map(image => `
+                        <tr>
+
+                            <td>
+                                ${escapeHTML(image.url)}
+                            </td>
+
+                            <td>
+                                ${escapeHTML(image.alt)}
+                            </td>
+
+                            <td>
+                                ${escapeHTML(
+                                    image.width ||
+                                    image.height
+                                    ? `${image.width} × ${image.height}`
+                                    : "未指定"
+                                )}
+                            </td>
+
+                        </tr>
+                    `).join("")}
+
+                </tbody>
+
+            </table>
+
+        </div>
+    `;
+}
+
+
+function renderForms(forms) {
+
+    if (!forms.length) {
+        return "沒有找到 Form。";
+    }
+
+    return `
+        <div class="table-wrapper">
+
+            <table>
+
+                <thead>
+                    <tr>
+                        <th>Method</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    ${forms.map(form => `
+                        <tr>
+
+                            <td>
+                                ${escapeHTML(form.method)}
+                            </td>
+
+                            <td>
+                                ${escapeHTML(form.action)}
+                            </td>
+
+                        </tr>
+                    `).join("")}
+
+                </tbody>
+
+            </table>
+
+        </div>
+    `;
+}
+
+
+function renderList(list) {
+
+    if (!list.length) {
+        return "沒有找到。";
+    }
+
+    return `
+        <div class="table-wrapper">
+
+            ${list.map(value => `
+                <p>
+                    ${escapeHTML(value)}
+                </p>
+            `).join("")}
+
+        </div>
+    `;
+}
+
+
+function item(label, value) {
+
+    return `
+        <div class="item">
+
+            <strong>
+                ${escapeHTML(label)}
+            </strong>
+
+            ${escapeHTML(
+                value || "未提供"
+            )}
+
+        </div>
+    `;
+}
+
+
+function showError(message) {
+
+    document.getElementById("result")
+        .innerHTML = `
+            <div class="card error">
+                ${message}
+            </div>
+        `;
+}
+
+
+function escapeHTML(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
+
+function formatBytes(bytes) {
+
+    if (bytes < 1024) {
+        return `${bytes} Bytes`;
+    }
+
+    if (bytes < 1024 * 1024) {
+        return `${(
+            bytes / 1024
+        ).toFixed(2)} KB`;
+    }
+
+    return `${(
+        bytes / 1024 / 1024
+    ).toFixed(2)} MB`;
 }
 
 </script>
