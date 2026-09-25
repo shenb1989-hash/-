@@ -61,15 +61,6 @@ button:hover {
     box-shadow: 0 2px 10px rgba(0,0,0,.06);
 }
 
-pre {
-    white-space: pre-wrap;
-    word-break: break-all;
-    background: #f1f3f5;
-    padding: 15px;
-    border-radius: 8px;
-    overflow-x: auto;
-}
-
 .item {
     padding: 8px 0;
     border-bottom: 1px solid #eee;
@@ -98,7 +89,10 @@ pre {
         type="url"
         placeholder="https://example.edu.tw"
     >
-    <button onclick="scanWebsite()">開始檢測</button>
+
+    <button onclick="scanWebsite()">
+        開始檢測
+    </button>
 </div>
 
 <div id="result"></div>
@@ -106,17 +100,36 @@ pre {
 </div>
 
 <script>
-// 📌 核心修改：利用 AllOrigins 免費中繼代理伺服器繞過瀏覽器 CORS 阻擋
-const CORS_PROXY = "https://allorigins.win";
 
+/*
+ * AllOrigins Raw Content API
+ *
+ * 所有 fetch 都統一使用：
+ *
+ * CORS_PROXY + encodeURIComponent(url)
+ *
+ * 例如：
+ * https://api.allorigins.win/raw?url=https%3A%2F%2Fexample.com
+ */
+const CORS_PROXY = "https://api.allorigins.win/raw?url=";
+
+
+/*
+ * 透過 AllOrigins 取得網站內容
+ */
 async function fetchText(url) {
-    // 將原本的網址打包塞到代理伺服器後面，由代理伺服器幫前端去抓網頁
-    const response = await fetch(CORS_PROXY + encodeURIComponent(url), {
-        method: "GET"
-    });
+
+    const response = await fetch(
+        CORS_PROXY + encodeURIComponent(url),
+        {
+            method: "GET"
+        }
+    );
 
     if (!response.ok) {
-        throw new Error(`HTTP ${response.status} (透過代理伺服器失敗)`);
+        throw new Error(
+            `HTTP ${response.status}（透過 Proxy 請求失敗）`
+        );
     }
 
     return {
@@ -125,7 +138,12 @@ async function fetchText(url) {
     };
 }
 
+
+/*
+ * 標準化 URL
+ */
 function normalizeUrl(url) {
+
     url = url.trim();
 
     if (!/^https?:\/\//i.test(url)) {
@@ -135,168 +153,369 @@ function normalizeUrl(url) {
     return new URL(url);
 }
 
+
+/*
+ * 擷取公開頁面連結
+ */
 function extractLinks(document, baseUrl) {
-    const links = [];
+
+    const links = new Set();
 
     document.querySelectorAll("a[href]").forEach(a => {
-        try {
-            const url = new URL(a.getAttribute("href"), baseUrl);
 
-            if (!links.includes(url.href)) {
-                links.push(url.href);
-            }
-        } catch {}
+        try {
+
+            const url = new URL(
+                a.getAttribute("href"),
+                baseUrl
+            );
+
+            links.add(url.href);
+
+        } catch {
+            // 忽略無效 URL
+        }
+
     });
 
-    return links;
+    return [...links];
 }
 
+
+/*
+ * 擷取公開 JavaScript
+ */
 function extractScripts(document, baseUrl) {
-    const scripts = [];
+
+    const scripts = new Set();
 
     document.querySelectorAll("script[src]").forEach(script => {
+
         try {
+
             const url = new URL(
                 script.getAttribute("src"),
                 baseUrl
             );
 
-            if (!scripts.includes(url.href)) {
-                scripts.push(url.href);
-            }
-        } catch {}
+            scripts.add(url.href);
+
+        } catch {
+            // 忽略無效 URL
+        }
+
     });
 
-    return scripts;
+    return [...scripts];
 }
 
+
+/*
+ * 從 HTML 原始內容尋找疑似公開 Endpoint
+ *
+ * 注意：
+ * 這只是「字串偵測」，
+ * 不代表該 Endpoint 一定存在或可以存取。
+ */
 function extractPublicEndpoints(text) {
+
     const endpoints = new Set();
 
     const patterns = [
-        /https?:\/\/[^\s"'<>]+/gi,
+
+        /https?:\/\/[^\s"'<>()[\]]+/gi,
+
         /\/api\/[A-Za-z0-9_?&=./%-]+/gi,
+
         /\/graphql(?:\/[A-Za-z0-9_?&=./%-]*)?/gi,
+
         /\/v[0-9]+\/[A-Za-z0-9_?&=./%-]+/gi
+
     ];
 
     for (const pattern of patterns) {
+
         const matches = text.match(pattern) || [];
 
         matches.forEach(match => {
-            endpoints.add(match);
+
+            /*
+             * 排除 Proxy 本身
+             */
+            if (
+                !match.includes("api.allorigins.win")
+            ) {
+                endpoints.add(match);
+            }
+
         });
     }
 
     return [...endpoints];
 }
 
-function renderList(items) {
-    if (!items.length) {
-        return "<div>沒有找到公開項目</div>";
-    }
 
-    return items
-        .map(item => `<div class="item">${escapeHtml(item)}</div>`)
-        .join("");
-}
-
+/*
+ * HTML Escape
+ */
 function escapeHtml(value) {
-    return value
+
+    return String(value)
         .replaceAll("&", "&amp;")
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
-        .replaceAll("'", "'");
+        .replaceAll("'", "&#39;");
 }
 
+
+/*
+ * 渲染列表
+ */
+function renderList(items) {
+
+    if (!items.length) {
+
+        return `
+            <div class="item">
+                沒有找到公開項目
+            </div>
+        `;
+    }
+
+    return items
+        .map(item => `
+            <div class="item">
+                ${escapeHtml(item)}
+            </div>
+        `)
+        .join("");
+}
+
+
+/*
+ * 檢查 robots.txt
+ */
+async function checkRobots(target) {
+
+    const robotsUrl =
+        new URL(
+            "/robots.txt",
+            target.origin
+        ).href;
+
+    try {
+
+        const response = await fetch(
+            CORS_PROXY + encodeURIComponent(robotsUrl),
+            {
+                method: "GET"
+            }
+        );
+
+        const text = await response.text();
+
+        if (
+            response.ok &&
+            text.trim() &&
+            !/^<!doctype html/i.test(text.trim()) &&
+            !/^<html/i.test(text.trim())
+        ) {
+
+            return {
+                url: robotsUrl,
+                status: `HTTP ${response.status}（讀取成功）`
+            };
+
+        }
+
+        return {
+            url: robotsUrl,
+            status: `HTTP ${response.status}（可能不存在或回傳錯誤頁面）`
+        };
+
+    } catch {
+
+        return {
+            url: robotsUrl,
+            status: "無法讀取"
+        };
+    }
+}
+
+
+/*
+ * 檢查 sitemap.xml
+ */
+async function checkSitemap(target) {
+
+    const sitemapUrl =
+        new URL(
+            "/sitemap.xml",
+            target.origin
+        ).href;
+
+    try {
+
+        const response = await fetch(
+            CORS_PROXY + encodeURIComponent(sitemapUrl),
+            {
+                method: "GET"
+            }
+        );
+
+        const text = await response.text();
+
+        if (
+            response.ok &&
+            text.trim() &&
+            !/^<!doctype html/i.test(text.trim()) &&
+            !/^<html/i.test(text.trim())
+        ) {
+
+            return {
+                url: sitemapUrl,
+                status: `HTTP ${response.status}（讀取成功）`
+            };
+
+        }
+
+        return {
+            url: sitemapUrl,
+            status: `HTTP ${response.status}（可能不存在或回傳錯誤頁面）`
+        };
+
+    } catch {
+
+        return {
+            url: sitemapUrl,
+            status: "無法讀取"
+        };
+    }
+}
+
+
+/*
+ * 主檢測流程
+ */
 async function scanWebsite() {
 
-    const result = document.getElementById("result");
-    const input = document.getElementById("url").value;
+    const result =
+        document.getElementById("result");
 
-    if (!input) {
+    const input =
+        document.getElementById("url").value;
+
+
+    /*
+     * 檢查輸入
+     */
+    if (!input.trim()) {
+
         result.innerHTML = `
             <div class="card error">
                 請輸入網站 URL
             </div>
         `;
+
         return;
     }
 
+
+    /*
+     * 標準化 URL
+     */
     let target;
 
     try {
+
         target = normalizeUrl(input);
+
     } catch {
+
         result.innerHTML = `
             <div class="card error">
                 URL 格式錯誤
             </div>
         `;
+
         return;
     }
 
+
+    /*
+     * 顯示載入狀態
+     */
     result.innerHTML = `
         <div class="card">
-            正在檢測（透過中繼代理）：<br>
-            <strong>${escapeHtml(target.href)}</strong>
+            正在檢測（透過 AllOrigins Proxy）：
+            <br>
+            <strong>
+                ${escapeHtml(target.href)}
+            </strong>
         </div>
     `;
 
+
     try {
 
-        const { response, text } = await fetchText(target.href);
+        /*
+         * 取得網站 HTML
+         */
+        const {
+            response,
+            text
+        } = await fetchText(target.href);
 
+
+        /*
+         * 解析 HTML
+         */
         const parser = new DOMParser();
-        const document = parser.parseFromString(
-            text,
-            "text/html"
-        );
 
-        const links = extractLinks(
-            document,
-            target.href
-        );
+        const parsedDocument =
+            parser.parseFromString(
+                text,
+                "text/html"
+            );
 
-        const scripts = extractScripts(
-            document,
-            target.href
-        );
 
-        const endpoints = extractPublicEndpoints(text);
+        /*
+         * 擷取公開資訊
+         */
+        const links =
+            extractLinks(
+                parsedDocument,
+                target.href
+            );
 
-        const robotsUrl =
-            new URL("/robots.txt", target.origin).href;
+        const scripts =
+            extractScripts(
+                parsedDocument,
+                target.href
+            );
 
-        const sitemapUrl =
-            new URL("/sitemap.xml", target.origin).href;
+        const endpoints =
+            extractPublicEndpoints(text);
 
-        let robotsStatus = "無法讀取";
 
-        try {
-            // 📌 修正點：robots.txt 請求同樣需要透過 Proxy 繞過 CORS
-            const robotsResponse =
-                await fetch(CORS_PROXY + encodeURIComponent(robotsUrl));
+        /*
+         * 檢查 robots.txt 與 sitemap.xml
+         */
+        const robots =
+            await checkRobots(target);
 
-            robotsStatus =
-                robotsResponse.ok ? `HTTP ${robotsResponse.status} (讀取成功)` : `HTTP ${robotsResponse.status}`;
-        } catch {}
+        const sitemap =
+            await checkSitemap(target);
 
-        let sitemapStatus = "無法讀取";
 
-        try {
-            // 📌 修正點：sitemap.xml 請求同樣需要透過 Proxy 繞過 CORS
-            const sitemapResponse =
-                await fetch(CORS_PROXY + encodeURIComponent(sitemapUrl));
-
-            sitemapStatus =
-                sitemapResponse.ok ? `HTTP ${sitemapResponse.status} (讀取成功)` : `HTTP ${sitemapResponse.status}`;
-        } catch {}
-
+        /*
+         * 顯示結果
+         */
         result.innerHTML = `
 
             <div class="card">
+
                 <h2>基本資訊</h2>
 
                 <div class="item">
@@ -318,48 +537,73 @@ async function scanWebsite() {
                     HTTP Status：
                     ${response.status}
                 </div>
+
             </div>
 
+
             <div class="card">
+
                 <h2>robots.txt</h2>
 
                 <div class="item">
-                    ${escapeHtml(robotsUrl)}
+                    ${escapeHtml(robots.url)}
                 </div>
 
                 <div class="item">
-                    ${escapeHtml(robotsStatus)}
+                    ${escapeHtml(robots.status)}
                 </div>
+
             </div>
 
+
             <div class="card">
+
                 <h2>sitemap.xml</h2>
 
                 <div class="item">
-                    ${escapeHtml(sitemapUrl)}
+                    ${escapeHtml(sitemap.url)}
                 </div>
 
                 <div class="item">
-                    ${escapeHtml(sitemapStatus)}
+                    ${escapeHtml(sitemap.status)}
                 </div>
+
             </div>
 
+
             <div class="card">
-                <h2>公開頁面連結 (${links.length})</h2>
+
+                <h2>
+                    公開頁面連結
+                    (${links.length})
+                </h2>
 
                 ${renderList(links)}
+
             </div>
 
+
             <div class="card">
-                <h2>公開 JavaScript (${scripts.length})</h2>
+
+                <h2>
+                    公開 JavaScript
+                    (${scripts.length})
+                </h2>
 
                 ${renderList(scripts)}
+
             </div>
 
+
             <div class="card">
-                <h2>疑似公開 Endpoint (${endpoints.length})</h2>
+
+                <h2>
+                    疑似公開 Endpoint
+                    (${endpoints.length})
+                </h2>
 
                 ${renderList(endpoints)}
+
             </div>
 
         `;
@@ -367,20 +611,29 @@ async function scanWebsite() {
     } catch (error) {
 
         result.innerHTML = `
+
             <div class="card error">
-                <h2>檢測失敗</h2>
+
+                <h2>
+                    檢測失敗
+                </h2>
 
                 <p>
                     ${escapeHtml(error.message)}
                 </p>
 
                 <p>
-                    常見原因：目標網站完全封鎖了該代理伺服器的 IP、無網路連線，或網址輸入錯誤。
+                    常見原因：目標網站無法由 Proxy 取得、
+                    Proxy 暫時無法使用、網路連線問題，
+                    或網址輸入錯誤。
                 </p>
+
             </div>
+
         `;
     }
 }
+
 </script>
 
 </body>
