@@ -1,577 +1,327 @@
-<!DOCTYPE html>
-<html lang="zh-TW">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>給廖唯希</title>
-
-<style>
-* {
-    box-sizing: border-box;
-}
-
-html,
-body {
-    margin: 0;
-    min-height: 100%;
-}
-
-body {
-    font-family:
-        -apple-system,
-        BlinkMacSystemFont,
-        "Microsoft JhengHei",
-        sans-serif;
-
-    background:
-        radial-gradient(circle at 20% 20%, #ffdce9 0%, transparent 35%),
-        radial-gradient(circle at 80% 80%, #ff9fc5 0%, transparent 40%),
-        linear-gradient(135deg, #ffb7d8, #ff6fa8);
-
-    color: white;
-    overflow-x: hidden;
-}
-
-.page {
-    min-height: 100vh;
-    width: 100%;
-
-    display: flex;
-    justify-content: center;
-    align-items: center;
+# safe_load_test.py
+# 用途：對「自己擁有或明確獲得授權」的網站進行受控壓力測試
+# Python 3.10+
+#
+# 安裝：
+# pip install requests
+#
+# 執行：
+# python safe_load_test.py
 
-    position: relative;
-    overflow: hidden;
-}
+import time
+import statistics
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from dataclasses import dataclass
+from urllib.parse import urlparse
 
-.start {
-    text-align: center;
-    z-index: 5;
+import requests
 
-    animation: fadeIn 1.5s ease;
-}
 
-.small-title {
-    font-size: 13px;
-    letter-spacing: 6px;
-    opacity: .75;
-    margin-bottom: 20px;
-}
+# =========================
+# 測試設定
+# =========================
 
-.title {
-    font-size: clamp(35px, 8vw, 60px);
-    font-weight: bold;
-    letter-spacing: 3px;
-    margin-bottom: 18px;
+MAX_CONCURRENCY = 100       # 最大同時連線數，避免無限制發送
+STEP = 10                   # 每次增加多少併發
+STEP_DURATION = 10          # 每個併發等級測試幾秒
+REQUEST_TIMEOUT = 10        # 單次 Request 最長等待時間
 
-    text-shadow:
-        0 5px 30px rgba(255,255,255,.35);
-}
+# 如果網站出現大量錯誤，就停止繼續增加壓力
+ERROR_RATE_STOP = 0.30
 
-.subtitle {
-    font-size: 17px;
-    letter-spacing: 2px;
-    opacity: .9;
-    margin-bottom: 45px;
-}
+# 防止意外輸入非 HTTP/HTTPS
+ALLOWED_SCHEMES = {"http", "https"}
 
-.start-button {
-    width: 175px;
-    height: 175px;
 
-    border-radius: 50%;
-
-    border: 1px solid rgba(255,255,255,.8);
-
-    background:
-        linear-gradient(
-            145deg,
-            rgba(255,255,255,.35),
-            rgba(255,70,140,.55)
-        );
-
-    color: white;
-
-    font-size: 24px;
-    font-weight: bold;
-
-    letter-spacing: 3px;
-
-    cursor: pointer;
-
-    box-shadow:
-        0 0 0 10px rgba(255,255,255,.05),
-        0 0 55px rgba(255,255,255,.5),
-        inset 0 0 35px rgba(255,255,255,.2);
-
-    backdrop-filter: blur(12px);
-
-    transition:
-        transform .3s ease,
-        box-shadow .3s ease;
-}
-
-.start-button:hover {
-    transform: scale(1.06);
-
-    box-shadow:
-        0 0 0 15px rgba(255,255,255,.05),
-        0 0 75px rgba(255,255,255,.7),
-        inset 0 0 40px rgba(255,255,255,.3);
-}
-
-.start-button:active {
-    transform: scale(.93);
-}
-
-.final {
-    display: none;
-
-    width: 100%;
-    min-height: 100vh;
-
-    padding: 70px 20px;
-
-    justify-content: center;
-    align-items: center;
-
-    flex-direction: column;
-
-    position: relative;
-
-    animation: finalIn 1.5s ease;
-}
-
-.heart-symbol {
-    font-size: 95px;
-
-    margin-bottom: 25px;
-
-    filter:
-        drop-shadow(0 0 25px rgba(255,255,255,.8));
-
-    animation: heartbeat 1.8s infinite ease-in-out;
-}
-
-.card {
-    width: min(900px, 94vw);
-
-    padding: 50px 45px;
-
-    border-radius: 32px;
-
-    background:
-        linear-gradient(
-            135deg,
-            rgba(255,255,255,.23),
-            rgba(255,255,255,.08)
-        );
-
-    border: 1px solid rgba(255,255,255,.4);
-
-    backdrop-filter: blur(22px);
-
-    box-shadow:
-        0 25px 90px rgba(120,30,70,.28),
-        inset 0 1px 0 rgba(255,255,255,.45);
-
-    text-align: center;
-
-    position: relative;
-}
-
-.card::before {
-    content: "♥";
-
-    position: absolute;
-
-    top: 22px;
-    left: 28px;
-
-    font-size: 18px;
-
-    opacity: .35;
-}
-
-.card::after {
-    content: "♥";
-
-    position: absolute;
-
-    bottom: 22px;
-    right: 28px;
-
-    font-size: 18px;
-
-    opacity: .35;
-}
-
-.name {
-    font-size: clamp(30px, 6vw, 45px);
-
-    font-weight: bold;
-
-    letter-spacing: 5px;
-
-    margin-bottom: 25px;
-
-    text-shadow:
-        0 4px 20px rgba(255,255,255,.3);
-}
-
-.divider {
-    width: 80px;
-    height: 1px;
-
-    margin: 0 auto 35px;
-
-    background: rgba(255,255,255,.8);
-}
-
-.message {
-    font-size: 19px;
-
-    line-height: 2;
-
-    letter-spacing: 1px;
-
-    text-align: left;
-
-    white-space: pre-wrap;
-
-    color: rgba(255,255,255,.97);
-
-    word-break: break-word;
-}
-
-.signature {
-    margin-top: 45px;
-
-    font-size: 14px;
-
-    letter-spacing: 4px;
-
-    opacity: .7;
-}
-
-.heart {
-    position: fixed;
-
-    font-size: 27px;
-
-    opacity: .35;
-
-    pointer-events: none;
-
-    animation: float 6s infinite ease-in-out;
-}
-
-.heart:nth-child(1) {
-    top: 10%;
-    left: 8%;
-}
-
-.heart:nth-child(2) {
-    top: 20%;
-    right: 12%;
-
-    animation-delay: 1s;
-}
-
-.heart:nth-child(3) {
-    bottom: 15%;
-    left: 15%;
-
-    animation-delay: 2s;
-}
-
-.heart:nth-child(4) {
-    bottom: 20%;
-    right: 10%;
-
-    animation-delay: 3s;
-}
-
-.particle {
-    position: fixed;
-
-    font-size: 22px;
-
-    pointer-events: none;
-
-    animation: explode 1.8s ease-out forwards;
-
-    z-index: 20;
-}
-
-@keyframes fadeIn {
-
-    from {
-        opacity: 0;
-        transform: translateY(25px);
+@dataclass
+class RequestResult:
+    success: bool
+    status_code: int | None
+    latency: float
+    error: str | None = None
+
+
+def validate_url(url: str) -> str:
+    """驗證測試網址。"""
+    url = url.strip()
+
+    if not url.startswith(("http://", "https://")):
+        url = "https://" + url
+
+    parsed = urlparse(url)
+
+    if parsed.scheme not in ALLOWED_SCHEMES:
+        raise ValueError("只允許 HTTP / HTTPS 網址。")
+
+    if not parsed.netloc:
+        raise ValueError("網址格式錯誤。")
+
+    return url
+
+
+def send_request(url: str) -> RequestResult:
+    """執行單次 GET Request。"""
+    start = time.perf_counter()
+
+    try:
+        response = requests.get(
+            url,
+            timeout=REQUEST_TIMEOUT,
+            headers={
+                "User-Agent": "ControlledLoadTester/1.0"
+            },
+        )
+
+        latency = time.perf_counter() - start
+
+        return RequestResult(
+            success=200 <= response.status_code < 400,
+            status_code=response.status_code,
+            latency=latency,
+        )
+
+    except requests.RequestException as exc:
+        latency = time.perf_counter() - start
+
+        return RequestResult(
+            success=False,
+            status_code=None,
+            latency=latency,
+            error=str(exc),
+        )
+
+
+def run_test(url: str, concurrency: int, duration: int):
+    """執行指定併發數的壓力測試。"""
+    results: list[RequestResult] = []
+
+    stop_event = threading.Event()
+
+    def worker():
+        while not stop_event.is_set():
+            results.append(send_request(url))
+
+    print()
+    print("=" * 70)
+    print(f"開始測試：{concurrency} 個同時連線")
+    print(f"測試時間：{duration} 秒")
+    print("=" * 70)
+
+    start_time = time.perf_counter()
+
+    with ThreadPoolExecutor(max_workers=concurrency) as executor:
+        futures = [
+            executor.submit(worker)
+            for _ in range(concurrency)
+        ]
+
+        time.sleep(duration)
+        stop_event.set()
+
+        for future in as_completed(futures):
+            try:
+                future.result()
+            except Exception:
+                pass
+
+    elapsed = time.perf_counter() - start_time
+
+    if not results:
+        return {
+            "concurrency": concurrency,
+            "requests": 0,
+            "success": 0,
+            "failed": 0,
+            "rps": 0,
+            "error_rate": 1,
+            "avg_latency": 0,
+            "p50": 0,
+            "p95": 0,
+            "p99": 0,
+            "max_latency": 0,
+        }
+
+    latencies = sorted(
+        result.latency
+        for result in results
+    )
+
+    success_count = sum(
+        result.success
+        for result in results
+    )
+
+    failed_count = len(results) - success_count
+
+    error_rate = failed_count / len(results)
+
+    def percentile(values, percentile):
+        index = int(len(values) * percentile / 100)
+
+        if index >= len(values):
+            index = len(values) - 1
+
+        return values[index]
+
+    return {
+        "concurrency": concurrency,
+        "requests": len(results),
+        "success": success_count,
+        "failed": failed_count,
+        "rps": len(results) / elapsed,
+        "error_rate": error_rate,
+        "avg_latency": statistics.mean(latencies),
+        "p50": percentile(latencies, 50),
+        "p95": percentile(latencies, 95),
+        "p99": percentile(latencies, 99),
+        "max_latency": max(latencies),
     }
 
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes finalIn {
-
-    from {
-        opacity: 0;
-        transform: scale(.96);
-    }
-
-    to {
-        opacity: 1;
-        transform: scale(1);
-    }
-}
-
-@keyframes heartbeat {
-
-    0%,
-    100% {
-        transform: scale(1);
-    }
-
-    15% {
-        transform: scale(1.12);
-    }
-
-    30% {
-        transform: scale(1);
-    }
-
-    45% {
-        transform: scale(1.08);
-    }
 
-    60% {
-        transform: scale(1);
-    }
-}
-
-@keyframes float {
-
-    0%,
-    100% {
-        transform:
-            translateY(0)
-            rotate(0deg);
-    }
-
-    50% {
-        transform:
-            translateY(-35px)
-            rotate(8deg);
-    }
-}
-
-@keyframes explode {
-
-    0% {
-        transform:
-            translate(0, 0)
-            scale(.5)
-            rotate(0deg);
-
-        opacity: 1;
-    }
-
-    100% {
-        transform:
-            translate(var(--x), var(--y))
-            scale(1.5)
-            rotate(180deg);
-
-        opacity: 0;
-    }
-}
-
-@media (max-width: 600px) {
-
-    .start-button {
-        width: 150px;
-        height: 150px;
-    }
-
-    .card {
-        padding: 38px 25px;
-        border-radius: 25px;
-    }
-
-    .message {
-        font-size: 17px;
-        line-height: 1.95;
-    }
-
-    .heart-symbol {
-        font-size: 75px;
-    }
-}
-</style>
-</head>
-
-<body>
-
-<div class="page">
-
-    <div class="start" id="start">
-
-        <div class="small-title">
-            FOR YOU
-        </div>
-
-        <div class="title">
-            給最愛的唯希 ♥
-        </div>
-
-        <div class="subtitle">
-            有一段話，我想親口告訴你
-        </div>
-
-        <button class="start-button" onclick="start()">
-            點擊開啟
-        </button>
-
-    </div>
-
-
-    <div class="heart">♥</div>
-    <div class="heart">♡</div>
-    <div class="heart">♥</div>
-    <div class="heart">♡</div>
-
-
-    <div class="final" id="final">
-
-        <div class="heart-symbol">
-            ♥
-        </div>
-
-
-        <div class="card">
-
-            <div class="name">
-                廖唯希
-            </div>
-
-            <div class="divider"></div>
-
-
-            <!--
-            ==========================================
-            之後你的長篇文字直接放在這裡
-            ==========================================
-
-            可以寫很多很多字。
-
-            可以自由換行。
-
-            可以分成很多段。
-
-            不需要自己加 <br>。
-
-            網頁會自動處理長文字，
-            手機也可以直接往下滑。
-
-            ==========================================
-            -->
-
-            <div class="message">
-
-在這裡放你之後想對唯希說的所有話。
-
-這裡可以放非常長的文字。
-
-你可以慢慢寫。
-
-一段一段寫。
-
-不管內容有多少，
-這個區域都會自動往下延伸。
-
-之後只需要把這些預設文字全部刪掉，
-換成你真正想對她說的話就可以。
-
-            </div>
-
-
-            <div class="signature">
-                FOREVER · WITH YOU
-            </div>
-
-        </div>
-
-    </div>
-
-</div>
-
-
-<script>
-
-function start() {
-
-    document.getElementById("start").style.display = "none";
-
-    createParticles();
-
-    setTimeout(() => {
-
-        document.getElementById("final").style.display = "flex";
-
-    }, 700);
-}
-
-
-function createParticles() {
-
-    for (let i = 0; i < 60; i++) {
-
-        const particle =
-            document.createElement("div");
-
-        particle.className = "particle";
-
-        particle.innerHTML =
-            Math.random() > 0.5
-                ? "♥"
-                : "♡";
-
-        particle.style.left = "50%";
-        particle.style.top = "50%";
-
-        const x =
-            (Math.random() - 0.5) * 900;
-
-        const y =
-            (Math.random() - 0.5) * 900;
-
-        particle.style.setProperty(
-            "--x",
-            x + "px"
-        );
-
-        particle.style.setProperty(
-            "--y",
-            y + "px"
-        );
-
-        document.body.appendChild(particle);
-
-        setTimeout(() => {
-
-            particle.remove();
-
-        }, 1800);
-    }
-}
-
-</script>
-
-</body>
-</html>
+def print_result(result):
+    """顯示測試結果。"""
+    print()
+    print(f"併發數       : {result['concurrency']}")
+    print(f"總 Request   : {result['requests']}")
+    print(f"成功         : {result['success']}")
+    print(f"失敗         : {result['failed']}")
+    print(f"錯誤率       : {result['error_rate'] * 100:.2f}%")
+    print(f"Requests/sec : {result['rps']:.2f}")
+    print(f"平均延遲     : {result['avg_latency'] * 1000:.2f} ms")
+    print(f"P50 延遲     : {result['p50'] * 1000:.2f} ms")
+    print(f"P95 延遲     : {result['p95'] * 1000:.2f} ms")
+    print(f"P99 延遲     : {result['p99'] * 1000:.2f} ms")
+    print(f"最高延遲     : {result['max_latency'] * 1000:.2f} ms")
+
+
+def main():
+    print("=" * 70)
+    print("              Controlled Website Load Tester")
+    print("=" * 70)
+
+    url = input("\n輸入你的網站網址：").strip()
+
+    try:
+        url = validate_url(url)
+    except ValueError as exc:
+        print(f"\n網址錯誤：{exc}")
+        return
+
+    print("\n測試目標：", url)
+    print(f"最大併發：{MAX_CONCURRENCY}")
+    print(f"每階段：{STEP_DURATION} 秒")
+
+    confirm = input(
+        "\n請確認這是你擁有或獲得授權測試的網站。輸入 YES 開始："
+    ).strip()
+
+    if confirm != "YES":
+        print("測試已取消。")
+        return
+
+    all_results = []
+
+    # 逐步增加壓力：
+    # 10 → 20 → 30 → ... → MAX_CONCURRENCY
+    for concurrency in range(STEP, MAX_CONCURRENCY + 1, STEP):
+
+        result = run_test(
+            url=url,
+            concurrency=concurrency,
+            duration=STEP_DURATION,
+        )
+
+        all_results.append(result)
+        print_result(result)
+
+        # 錯誤率過高，停止增加壓力
+        if result["error_rate"] >= ERROR_RATE_STOP:
+            print()
+            print("=" * 70)
+            print("偵測到大量 Request 失敗，停止增加壓力。")
+            print("=" * 70)
+            break
+
+    if not all_results:
+        return
+
+    # 找出測試期間成功處理量最高的階段
+    best = max(
+        all_results,
+        key=lambda x: x["success"]
+    )
+
+    print()
+    print()
+    print("#" * 70)
+    print("                         測試總結")
+    print("#" * 70)
+
+    print(f"""
+測試網址：
+{url}
+
+最高成功 Request 數：
+{best['success']}
+
+該階段總 Request：
+{best['requests']}
+
+該階段併發數：
+{best['concurrency']}
+
+該階段吞吐量：
+{best['rps']:.2f} Requests/sec
+
+平均延遲：
+{best['avg_latency'] * 1000:.2f} ms
+
+P50：
+{best['p50'] * 1000:.2f} ms
+
+P95：
+{best['p95'] * 1000:.2f} ms
+
+P99：
+{best['p99'] * 1000:.2f} ms
+
+最高延遲：
+{best['max_latency'] * 1000:.2f} ms
+
+錯誤率：
+{best['error_rate'] * 100:.2f} %
+""")
+
+    print("-" * 70)
+    print("各階段統計")
+    print("-" * 70)
+
+    print(
+        f"{'併發':>8}"
+        f"{'Requests':>12}"
+        f"{'成功':>12}"
+        f"{'失敗':>12}"
+        f"{'RPS':>12}"
+        f"{'P95(ms)':>12}"
+        f"{'錯誤率':>12}"
+    )
+
+    for result in all_results:
+        print(
+            f"{result['concurrency']:>8}"
+            f"{result['requests']:>12}"
+            f"{result['success']:>12}"
+            f"{result['failed']:>12}"
+            f"{result['rps']:>12.2f}"
+            f"{result['p95'] * 1000:>12.2f}"
+            f"{result['error_rate'] * 100:>11.2f}%"
+        )
+
+    print("#" * 70)
+    print("測試完成")
+    print("#" * 70)
+
+
+if __name__ == "__main__":
+    main()
