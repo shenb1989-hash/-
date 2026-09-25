@@ -1,446 +1,239 @@
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>網站資訊爬取工具</title>
 
-    <title>網站公開資訊分析器</title>
+<style>
+* {
+    box-sizing: border-box;
+}
 
-    <style>
-        * {
-            box-sizing: border-box;
-        }
+body {
+    margin: 0;
+    padding: 25px 15px;
+    background: #f4f6f8;
+    font-family: Arial, "Noto Sans TC", sans-serif;
+    color: #222;
+}
 
-        body {
-            margin: 0;
-            padding: 30px 15px;
-            background: #f4f6f8;
-            font-family: Arial, "Noto Sans TC", sans-serif;
-            color: #1f2937;
-        }
+.container {
+    max-width: 1100px;
+    margin: auto;
+}
 
-        .container {
-            width: 100%;
-            max-width: 1200px;
-            margin: auto;
-        }
+h1 {
+    text-align: center;
+}
 
-        h1 {
-            text-align: center;
-            margin-bottom: 25px;
-        }
+.search {
+    display: flex;
+    gap: 10px;
+    margin: 25px 0;
+}
 
-        .search {
-            display: flex;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
+input {
+    flex: 1;
+    padding: 14px;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    font-size: 16px;
+}
 
-        input {
-            flex: 1;
-            padding: 14px;
-            border: 1px solid #d1d5db;
-            border-radius: 8px;
-            font-size: 16px;
-        }
+button {
+    padding: 14px 25px;
+    border: 0;
+    border-radius: 8px;
+    background: #2563eb;
+    color: white;
+    cursor: pointer;
+}
 
-        button {
-            padding: 14px 25px;
-            border: 0;
-            border-radius: 8px;
-            background: #2563eb;
-            color: white;
-            cursor: pointer;
-            font-size: 16px;
-        }
+.card {
+    background: white;
+    padding: 20px;
+    margin: 15px 0;
+    border-radius: 10px;
+    box-shadow: 0 3px 12px #0001;
+}
 
-        button:hover {
-            background: #1d4ed8;
-        }
+.grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 10px;
+}
 
-        .card {
-            background: white;
-            border-radius: 12px;
-            padding: 20px;
-            margin-bottom: 18px;
-            box-shadow: 0 3px 12px rgba(0,0,0,.07);
-        }
+.item {
+    padding: 12px;
+    background: #f3f4f6;
+    border-radius: 7px;
+    word-break: break-all;
+}
 
-        .card h2 {
-            margin-top: 0;
-        }
+pre {
+    background: #111827;
+    color: #e5e7eb;
+    padding: 15px;
+    border-radius: 8px;
+    overflow: auto;
+    max-height: 600px;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
 
-        .grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-            gap: 12px;
-        }
+table {
+    width: 100%;
+    border-collapse: collapse;
+}
 
-        .item {
-            padding: 14px;
-            background: #f3f4f6;
-            border-radius: 8px;
-            word-break: break-word;
-        }
+th,
+td {
+    padding: 10px;
+    border-bottom: 1px solid #ddd;
+    text-align: left;
+    word-break: break-all;
+}
 
-        .item strong {
-            display: block;
-            margin-bottom: 6px;
-        }
+.status {
+    padding: 15px;
+    border-radius: 8px;
+    background: #eef2ff;
+}
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-        }
+.error {
+    background: #fee2e2;
+    color: #991b1b;
+}
 
-        th,
-        td {
-            padding: 10px;
-            border-bottom: 1px solid #e5e7eb;
-            text-align: left;
-            vertical-align: top;
-            word-break: break-word;
-        }
+@media (max-width: 600px) {
+    .search {
+        flex-direction: column;
+    }
 
-        th {
-            background: #f3f4f6;
-        }
-
-        .scroll {
-            max-height: 450px;
-            overflow: auto;
-        }
-
-        pre {
-            background: #111827;
-            color: #e5e7eb;
-            padding: 18px;
-            border-radius: 8px;
-            overflow: auto;
-            max-height: 600px;
-            white-space: pre-wrap;
-            word-break: break-word;
-        }
-
-        .loading {
-            text-align: center;
-            padding: 30px;
-        }
-
-        .error {
-            color: #dc2626;
-            font-weight: bold;
-        }
-
-        @media (max-width: 650px) {
-            .search {
-                flex-direction: column;
-            }
-
-            button {
-                width: 100%;
-            }
-
-            table {
-                font-size: 14px;
-            }
-        }
-    </style>
+    button {
+        width: 100%;
+    }
+}
+</style>
 </head>
 
 <body>
 
 <div class="container">
 
-    <h1>網站公開資訊分析器</h1>
+<h1>網站資訊爬取工具</h1>
 
-    <div class="search">
+<div class="search">
 
-        <input
-            id="urlInput"
-            type="url"
-            placeholder="https://example.com"
-        >
+<input
+    id="url"
+    type="url"
+    placeholder="輸入 https://example.com"
+>
 
-        <button onclick="analyzeWebsite()">
-            開始分析
-        </button>
+<button onclick="scan()">
+    開始爬取
+</button>
 
-    </div>
+</div>
 
-    <div id="result"></div>
+<div id="result"></div>
 
 </div>
 
 <script>
 
-async function analyzeWebsite() {
+async function scan() {
 
-    const input = document.getElementById("urlInput");
+    const url = document.getElementById("url").value.trim();
     const result = document.getElementById("result");
 
-    const target = input.value.trim();
-
-    if (!target) {
+    if (!url) {
         result.innerHTML = `
             <div class="card error">
-                請輸入網站 URL。
-            </div>
-        `;
-        return;
-    }
-
-    try {
-        new URL(target);
-    } catch {
-        result.innerHTML = `
-            <div class="card error">
-                URL 格式錯誤。
+                請輸入網址
             </div>
         `;
         return;
     }
 
     result.innerHTML = `
-        <div class="card loading">
-            正在取得並分析網站公開資料...
+        <div class="card status">
+            正在取得網站資料...
         </div>
     `;
 
     try {
 
         const response = await fetch(
-            "/api/fetch?url=" + encodeURIComponent(target)
+            "https://api.allorigins.win/raw?url=" +
+            encodeURIComponent(url)
         );
 
-        const data = await response.json();
-
-        if (!response.ok || !data.success) {
-            throw new Error(data.error || "取得網站失敗");
+        if (!response.ok) {
+            throw new Error("無法取得網站");
         }
 
-        const analysis = analyzeHTML(
-            data.html,
-            data.url
+        const html = await response.text();
+
+        const parser = new DOMParser();
+
+        const doc = parser.parseFromString(
+            html,
+            "text/html"
         );
 
-        renderResult(
-            data,
-            analysis
-        );
+        const title =
+            doc.querySelector("title")?.innerText || "";
 
-    } catch (error) {
+        const description =
+            doc.querySelector(
+                'meta[name="description"]'
+            )?.content || "";
+
+        const keywords =
+            doc.querySelector(
+                'meta[name="keywords"]'
+            )?.content || "";
+
+        const links = [
+            ...doc.querySelectorAll("a")
+        ].map(a => ({
+            text: a.innerText.trim(),
+            href: a.href
+        }));
+
+        const images = [
+            ...doc.querySelectorAll("img")
+        ].map(img => ({
+            src: img.src,
+            alt: img.alt
+        }));
+
+        const scripts = [
+            ...doc.querySelectorAll("script[src]")
+        ].map(script => script.src);
+
+        const styles = [
+            ...doc.querySelectorAll(
+                'link[rel="stylesheet"]'
+            )
+        ].map(link => link.href);
+
+        const headings = [
+            ...doc.querySelectorAll(
+                "h1,h2,h3,h4,h5,h6"
+            )
+        ].map(h => ({
+            tag: h.tagName,
+            text: h.innerText.trim()
+        }));
+
+        const text =
+            doc.body?.innerText || "";
 
         result.innerHTML = `
-            <div class="card error">
-                ${escapeHTML(error.message)}
-            </div>
-        `;
-    }
-}
-
-
-/**
- * 分析 HTML 公開資訊
- */
-function analyzeHTML(html, baseURL) {
-
-    const parser = new DOMParser();
-
-    const doc = parser.parseFromString(
-        html,
-        "text/html"
-    );
-
-    const getMeta = (name) => {
-
-        const element =
-            doc.querySelector(
-                `meta[name="${name}"]`
-            );
-
-        return element?.content || "";
-    };
-
-    const getProperty = (property) => {
-
-        const element =
-            doc.querySelector(
-                `meta[property="${property}"]`
-            );
-
-        return element?.content || "";
-    };
-
-    const resolveURL = (value) => {
-
-        try {
-            return new URL(value, baseURL).href;
-        } catch {
-            return value;
-        }
-    };
-
-    const links = [...doc.querySelectorAll("a")]
-        .map(a => ({
-            text: a.innerText.trim(),
-            url: resolveURL(a.getAttribute("href") || "")
-        }))
-        .filter(item => item.url);
-
-    const images = [...doc.querySelectorAll("img")]
-        .map(img => ({
-            src: resolveURL(img.getAttribute("src") || ""),
-            alt: img.getAttribute("alt") || "",
-            width: img.getAttribute("width") || "",
-            height: img.getAttribute("height") || ""
-        }));
-
-    const scripts = [...doc.querySelectorAll("script[src]")]
-        .map(script =>
-            resolveURL(script.getAttribute("src"))
-        );
-
-    const stylesheets = [
-        ...doc.querySelectorAll('link[rel="stylesheet"]')
-    ]
-        .map(link =>
-            resolveURL(link.getAttribute("href"))
-        );
-
-    const forms = [...doc.querySelectorAll("form")]
-        .map(form => ({
-            method:
-                (form.getAttribute("method") || "GET")
-                    .toUpperCase(),
-
-            action:
-                resolveURL(
-                    form.getAttribute("action") || baseURL
-                )
-        }));
-
-    const headings = {};
-
-    for (let level = 1; level <= 6; level++) {
-
-        headings[`h${level}`] =
-            [...doc.querySelectorAll(`h${level}`)]
-                .map(element =>
-                    element.innerText.trim()
-                )
-                .filter(Boolean);
-    }
-
-    const faviconElement =
-        doc.querySelector(
-            'link[rel~="icon"], link[rel="shortcut icon"]'
-        );
-
-    const canonical =
-        doc.querySelector(
-            'link[rel="canonical"]'
-        )?.href || "";
-
-    const text =
-        doc.body?.innerText
-            .replace(/\s+/g, " ")
-            .trim() || "";
-
-    return {
-
-        title: doc.title,
-
-        description: getMeta("description"),
-
-        keywords: getMeta("keywords"),
-
-        author: getMeta("author"),
-
-        robots: getMeta("robots"),
-
-        viewport: getMeta("viewport"),
-
-        language:
-            doc.documentElement.lang || "",
-
-        charset:
-            doc.characterSet || "",
-
-        canonical,
-
-        favicon:
-            faviconElement
-                ? resolveURL(
-                    faviconElement.getAttribute("href")
-                )
-                : "",
-
-        openGraph: {
-
-            title: getProperty("og:title"),
-
-            description:
-                getProperty("og:description"),
-
-            image:
-                resolveURL(
-                    getProperty("og:image")
-                ),
-
-            url:
-                getProperty("og:url"),
-
-            type:
-                getProperty("og:type")
-        },
-
-        twitter: {
-
-            card:
-                getMeta("twitter:card"),
-
-            title:
-                getMeta("twitter:title"),
-
-            description:
-                getMeta("twitter:description"),
-
-            image:
-                getMeta("twitter:image")
-        },
-
-        headings,
-
-        links,
-
-        images,
-
-        scripts,
-
-        stylesheets,
-
-        forms,
-
-        textLength: text.length,
-
-        wordCount:
-            text
-                ? text.split(/\s+/).length
-                : 0
-    };
-}
-
-
-/**
- * 顯示分析結果
- */
-function renderResult(data, analysis) {
-
-    const result =
-        document.getElementById("result");
-
-    result.innerHTML = `
 
         <div class="card">
 
@@ -448,86 +241,47 @@ function renderResult(data, analysis) {
 
             <div class="grid">
 
-                ${item(
-                    "HTTP Status",
-                    data.status
-                )}
+                <div class="item">
+                    <b>Title</b><br>
+                    ${escapeHTML(title)}
+                </div>
 
-                ${item(
-                    "Content-Type",
-                    data.contentType
-                )}
+                <div class="item">
+                    <b>Description</b><br>
+                    ${escapeHTML(description)}
+                </div>
 
-                ${item(
-                    "HTML 大小",
-                    formatBytes(data.size)
-                )}
+                <div class="item">
+                    <b>Keywords</b><br>
+                    ${escapeHTML(keywords)}
+                </div>
 
-                ${item(
-                    "最終 URL",
-                    data.url
-                )}
+                <div class="item">
+                    <b>HTML 大小</b><br>
+                    ${formatBytes(
+                        new Blob([html]).size
+                    )}
+                </div>
 
-                ${item(
-                    "HTML 字數",
-                    analysis.textLength
-                )}
+                <div class="item">
+                    <b>文字長度</b><br>
+                    ${text.length}
+                </div>
 
-                ${item(
-                    "文字單字數",
-                    analysis.wordCount
-                )}
+                <div class="item">
+                    <b>連結數量</b><br>
+                    ${links.length}
+                </div>
 
-                ${item(
-                    "語言",
-                    analysis.language
-                )}
+                <div class="item">
+                    <b>圖片數量</b><br>
+                    ${images.length}
+                </div>
 
-                ${item(
-                    "Charset",
-                    analysis.charset
-                )}
-
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>SEO / Meta</h2>
-
-            <div class="grid">
-
-                ${item(
-                    "Title",
-                    analysis.title
-                )}
-
-                ${item(
-                    "Description",
-                    analysis.description
-                )}
-
-                ${item(
-                    "Keywords",
-                    analysis.keywords
-                )}
-
-                ${item(
-                    "Author",
-                    analysis.author
-                )}
-
-                ${item(
-                    "Robots",
-                    analysis.robots
-                )}
-
-                ${item(
-                    "Canonical",
-                    analysis.canonical
-                )}
+                <div class="item">
+                    <b>JavaScript 數量</b><br>
+                    ${scripts.length}
+                </div>
 
             </div>
 
@@ -536,358 +290,139 @@ function renderResult(data, analysis) {
 
         <div class="card">
 
-            <h2>Open Graph</h2>
+            <h2>標題結構</h2>
 
-            <div class="grid">
-
-                ${item(
-                    "og:title",
-                    analysis.openGraph.title
-                )}
-
-                ${item(
-                    "og:description",
-                    analysis.openGraph.description
-                )}
-
-                ${item(
-                    "og:image",
-                    analysis.openGraph.image
-                )}
-
-                ${item(
-                    "og:url",
-                    analysis.openGraph.url
-                )}
-
-                ${item(
-                    "og:type",
-                    analysis.openGraph.type
-                )}
-
-            </div>
+            ${headings.length
+                ? headings.map(h => `
+                    <p>
+                        <b>${h.tag}</b>
+                        ${escapeHTML(h.text)}
+                    </p>
+                `).join("")
+                : "沒有找到標題"
+            }
 
         </div>
 
 
         <div class="card">
 
-            <h2>Twitter Card</h2>
+            <h2>公開連結</h2>
 
-            <div class="grid">
+            <table>
 
-                ${item(
-                    "Card",
-                    analysis.twitter.card
-                )}
+                <tr>
+                    <th>文字</th>
+                    <th>URL</th>
+                </tr>
 
-                ${item(
-                    "Title",
-                    analysis.twitter.title
-                )}
+                ${links.map(link => `
+                    <tr>
+                        <td>
+                            ${escapeHTML(link.text)}
+                        </td>
 
-                ${item(
-                    "Description",
-                    analysis.twitter.description
-                )}
+                        <td>
+                            ${escapeHTML(link.href)}
+                        </td>
+                    </tr>
+                `).join("")}
 
-                ${item(
-                    "Image",
-                    analysis.twitter.image
-                )}
-
-            </div>
+            </table>
 
         </div>
 
 
         <div class="card">
 
-            <h2>HTML 標題結構</h2>
+            <h2>圖片</h2>
 
-            ${renderHeadings(analysis.headings)}
+            <table>
 
-        </div>
+                <tr>
+                    <th>URL</th>
+                    <th>Alt</th>
+                </tr>
 
+                ${images.map(image => `
+                    <tr>
+                        <td>
+                            ${escapeHTML(image.src)}
+                        </td>
 
-        <div class="card">
+                        <td>
+                            ${escapeHTML(image.alt)}
+                        </td>
+                    </tr>
+                `).join("")}
 
-            <h2>公開連結 (${analysis.links.length})</h2>
-
-            ${renderLinks(analysis.links)}
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>圖片 (${analysis.images.length})</h2>
-
-            ${renderImages(analysis.images)}
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>JavaScript (${analysis.scripts.length})</h2>
-
-            ${renderList(analysis.scripts)}
+            </table>
 
         </div>
 
 
         <div class="card">
 
-            <h2>CSS (${analysis.stylesheets.length})</h2>
+            <h2>JavaScript</h2>
 
-            ${renderList(analysis.stylesheets)}
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>公開 Form (${analysis.forms.length})</h2>
-
-            ${renderForms(analysis.forms)}
+            ${scripts.length
+                ? scripts.map(s =>
+                    `<p>${escapeHTML(s)}</p>`
+                  ).join("")
+                : "沒有找到"
+            }
 
         </div>
 
 
         <div class="card">
 
-            <h2>Favicon</h2>
+            <h2>CSS</h2>
 
-            <p>
-                ${escapeHTML(analysis.favicon || "未找到")}
-            </p>
+            ${styles.length
+                ? styles.map(s =>
+                    `<p>${escapeHTML(s)}</p>`
+                  ).join("")
+                : "沒有找到"
+            }
 
         </div>
 
 
         <div class="card">
 
-            <h2>完整 HTML 原始碼</h2>
+            <h2>HTML 原始碼</h2>
 
-            <pre>${escapeHTML(data.html)}</pre>
+            <pre>${escapeHTML(html)}</pre>
 
         </div>
 
-    `;
-}
-
-
-function item(label, value) {
-
-    return `
-        <div class="item">
-            <strong>${escapeHTML(label)}</strong>
-            ${escapeHTML(value || "未提供")}
-        </div>
-    `;
-}
-
-
-function renderHeadings(headings) {
-
-    let html = "";
-
-    for (const level of Object.keys(headings)) {
-
-        html += `
-            <h3>${level.toUpperCase()}</h3>
         `;
 
-        if (!headings[level].length) {
+    } catch (error) {
 
-            html += `
-                <p>沒有找到</p>
-            `;
+        result.innerHTML = `
+            <div class="card error">
 
-            continue;
-        }
+                無法取得這個網站。
 
-        html += "<ul>";
+                <br><br>
 
-        for (const value of headings[level]) {
+                可能原因：
+                <br>
+                1. 網站禁止跨來源請求
+                <br>
+                2. 網站拒絕第三方 Proxy
+                <br>
+                3. 網站需要登入
+                <br>
+                4. 網址不存在
+                <br>
+                5. Proxy 暫時無法使用
 
-            html += `
-                <li>${escapeHTML(value)}</li>
-            `;
-        }
-
-        html += "</ul>";
+            </div>
+        `;
     }
-
-    return html;
-}
-
-
-function renderLinks(links) {
-
-    if (!links.length) {
-        return "<p>沒有找到公開連結。</p>";
-    }
-
-    return `
-        <div class="scroll">
-
-            <table>
-
-                <thead>
-                    <tr>
-                        <th>文字</th>
-                        <th>URL</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    ${links.map(link => `
-                        <tr>
-                            <td>
-                                ${escapeHTML(link.text)}
-                            </td>
-
-                            <td>
-                                ${escapeHTML(link.url)}
-                            </td>
-                        </tr>
-                    `).join("")}
-
-                </tbody>
-
-            </table>
-
-        </div>
-    `;
-}
-
-
-function renderImages(images) {
-
-    if (!images.length) {
-        return "<p>沒有找到圖片。</p>";
-    }
-
-    return `
-        <div class="scroll">
-
-            <table>
-
-                <thead>
-                    <tr>
-                        <th>圖片 URL</th>
-                        <th>Alt</th>
-                        <th>尺寸</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    ${images.map(image => `
-                        <tr>
-
-                            <td>
-                                ${escapeHTML(image.src)}
-                            </td>
-
-                            <td>
-                                ${escapeHTML(image.alt)}
-                            </td>
-
-                            <td>
-                                ${escapeHTML(
-                                    image.width ||
-                                    image.height
-                                    ? `${image.width} × ${image.height}`
-                                    : "未指定"
-                                )}
-                            </td>
-
-                        </tr>
-                    `).join("")}
-
-                </tbody>
-
-            </table>
-
-        </div>
-    `;
-}
-
-
-function renderForms(forms) {
-
-    if (!forms.length) {
-        return "<p>沒有找到 Form。</p>";
-    }
-
-    return `
-        <div class="scroll">
-
-            <table>
-
-                <thead>
-                    <tr>
-                        <th>Method</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    ${forms.map(form => `
-                        <tr>
-                            <td>
-                                ${escapeHTML(form.method)}
-                            </td>
-
-                            <td>
-                                ${escapeHTML(form.action)}
-                            </td>
-                        </tr>
-                    `).join("")}
-
-                </tbody>
-
-            </table>
-
-        </div>
-    `;
-}
-
-
-function renderList(list) {
-
-    if (!list.length) {
-        return "<p>沒有找到。</p>";
-    }
-
-    return `
-        <div class="scroll">
-            <ul>
-                ${list.map(value => `
-                    <li>${escapeHTML(value)}</li>
-                `).join("")}
-            </ul>
-        </div>
-    `;
-}
-
-
-function formatBytes(bytes) {
-
-    if (bytes < 1024) {
-        return `${bytes} Bytes`;
-    }
-
-    if (bytes < 1024 * 1024) {
-        return `${(bytes / 1024).toFixed(2)} KB`;
-    }
-
-    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
 }
 
 
@@ -899,6 +434,22 @@ function escapeHTML(value) {
         .replace(/>/g, "&gt;")
         .replace(/"/g, "&quot;")
         .replace(/'/g, "&#039;");
+}
+
+
+function formatBytes(bytes) {
+
+    if (bytes < 1024) {
+        return bytes + " Bytes";
+    }
+
+    if (bytes < 1024 * 1024) {
+        return (bytes / 1024).toFixed(2) + " KB";
+    }
+
+    return (
+        bytes / 1024 / 1024
+    ).toFixed(2) + " MB";
 }
 
 </script>
