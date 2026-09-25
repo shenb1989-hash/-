@@ -106,13 +106,17 @@ pre {
 </div>
 
 <script>
+// 📌 核心修改：利用 AllOrigins 免費中繼代理伺服器繞過瀏覽器 CORS 阻擋
+const CORS_PROXY = "https://allorigins.win";
+
 async function fetchText(url) {
-    const response = await fetch(url, {
+    // 將原本的網址打包塞到代理伺服器後面，由代理伺服器幫前端去抓網頁
+    const response = await fetch(CORS_PROXY + encodeURIComponent(url), {
         method: "GET"
     });
 
     if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
+        throw new Error(`HTTP ${response.status} (透過代理伺服器失敗)`);
     }
 
     return {
@@ -203,7 +207,7 @@ function escapeHtml(value) {
         .replaceAll("<", "&lt;")
         .replaceAll(">", "&gt;")
         .replaceAll('"', "&quot;")
-        .replaceAll("'", "&#039;");
+        .replaceAll("'", "'");
 }
 
 async function scanWebsite() {
@@ -235,7 +239,7 @@ async function scanWebsite() {
 
     result.innerHTML = `
         <div class="card">
-            正在檢測：
+            正在檢測（透過中繼代理）：<br>
             <strong>${escapeHtml(target.href)}</strong>
         </div>
     `;
@@ -271,21 +275,23 @@ async function scanWebsite() {
         let robotsStatus = "無法讀取";
 
         try {
+            // 📌 修正點：robots.txt 請求同樣需要透過 Proxy 繞過 CORS
             const robotsResponse =
-                await fetch(robotsUrl);
+                await fetch(CORS_PROXY + encodeURIComponent(robotsUrl));
 
             robotsStatus =
-                `HTTP ${robotsResponse.status}`;
+                robotsResponse.ok ? `HTTP ${robotsResponse.status} (讀取成功)` : `HTTP ${robotsResponse.status}`;
         } catch {}
 
         let sitemapStatus = "無法讀取";
 
         try {
+            // 📌 修正點：sitemap.xml 請求同樣需要透過 Proxy 繞過 CORS
             const sitemapResponse =
-                await fetch(sitemapUrl);
+                await fetch(CORS_PROXY + encodeURIComponent(sitemapUrl));
 
             sitemapStatus =
-                `HTTP ${sitemapResponse.status}`;
+                sitemapResponse.ok ? `HTTP ${sitemapResponse.status} (讀取成功)` : `HTTP ${sitemapResponse.status}`;
         } catch {}
 
         result.innerHTML = `
@@ -311,13 +317,6 @@ async function scanWebsite() {
                 <div class="item">
                     HTTP Status：
                     ${response.status}
-                </div>
-
-                <div class="item">
-                    Content-Type：
-                    ${escapeHtml(
-                        response.headers.get("content-type") || "未知"
-                    )}
                 </div>
             </div>
 
@@ -376,8 +375,7 @@ async function scanWebsite() {
                 </p>
 
                 <p>
-                    常見原因：網站禁止跨來源請求（CORS）、
-                    網站要求登入，或伺服器拒絕瀏覽器直接存取。
+                    常見原因：目標網站完全封鎖了該代理伺服器的 IP、無網路連線，或網址輸入錯誤。
                 </p>
             </div>
         `;
