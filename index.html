@@ -19,7 +19,7 @@ body {
 }
 
 .container {
-    max-width: 900px;
+    max-width: 1000px;
     margin: auto;
 }
 
@@ -83,11 +83,12 @@ button:disabled {
     height: 100%;
     width: 0%;
     background: #111;
+    transition: width .2s;
 }
 
 .grid {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: 10px;
 }
 
@@ -99,7 +100,7 @@ button:disabled {
 
 .stat b {
     display: block;
-    font-size: 22px;
+    font-size: 21px;
     margin-top: 5px;
 }
 
@@ -107,9 +108,11 @@ table {
     width: 100%;
     border-collapse: collapse;
     margin-top: 15px;
+    font-size: 14px;
 }
 
-th, td {
+th,
+td {
     padding: 10px;
     border-bottom: 1px solid #ddd;
     text-align: center;
@@ -128,6 +131,33 @@ th, td {
     border-radius: 10px;
     margin-top: 15px;
 }
+
+.error {
+    padding: 15px;
+    background: #f8d7da;
+    border-radius: 10px;
+    margin-top: 15px;
+}
+
+pre {
+    white-space: pre-wrap;
+    word-break: break-all;
+    background: #111;
+    color: #eee;
+    padding: 15px;
+    border-radius: 8px;
+    overflow-x: auto;
+}
+
+@media (max-width: 700px) {
+    .grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+
+    table {
+        font-size: 12px;
+    }
+}
 </style>
 </head>
 
@@ -143,10 +173,10 @@ th, td {
 <input id="url" value="https://ssjh.tc.edu.tw/">
 
 <label>開始並發數</label>
-<input id="start" type="number" value="5" min="1" max="50">
+<input id="start" type="number" value="5" min="1" max="100">
 
 <label>每階段增加</label>
-<input id="step" type="number" value="5" min="1" max="20">
+<input id="step" type="number" value="5" min="1" max="50">
 
 <label>最高並發數</label>
 <input id="max" type="number" value="50" min="1" max="100">
@@ -170,7 +200,7 @@ th, td {
 
 <div class="card">
 
-<h2>目前結果</h2>
+<h2>即時結果</h2>
 
 <div class="grid">
 
@@ -224,7 +254,11 @@ P95
 <th>失敗</th>
 <th>RPS</th>
 <th>平均</th>
+<th>P50</th>
 <th>P95</th>
+<th>P99</th>
+<th>最快</th>
+<th>最慢</th>
 <th>狀態</th>
 </tr>
 </thead>
@@ -235,63 +269,160 @@ P95
 
 </div>
 
+<div class="card">
+
+<h2>HTTP Status 統計</h2>
+
+<pre id="statusReport">尚無資料</pre>
+
+</div>
+
+<div class="card">
+
+<h2>錯誤統計</h2>
+
+<pre id="errorReport">尚無資料</pre>
+
+</div>
+
+<div class="card">
+
+<h2>測試資訊</h2>
+
+<pre id="testInfo">尚未開始</pre>
+
+</div>
+
 </div>
 
 <script>
 
 let running = false;
 
-function percentile(values, p) {
+let allStatus = {};
 
-    if (!values.length) return 0;
-
-    values.sort((a,b) => a-b);
-
-    const index = Math.ceil(values.length * p) - 1;
-
-    return values[Math.max(0, index)];
-
-}
+let allErrors = {};
 
 function sleep(ms) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
+function percentile(values, p) {
+
+    if (!values.length) {
+        return 0;
+    }
+
+    const sorted = [...values].sort((a, b) => a - b);
+
+    const index =
+        Math.ceil(sorted.length * p) - 1;
+
+    return sorted[Math.max(0, index)];
+}
+
+function addStatus(status) {
+
+    allStatus[status] =
+        (allStatus[status] || 0) + 1;
+
+}
+
+function addError(error) {
+
+    allErrors[error] =
+        (allErrors[error] || 0) + 1;
+
+}
+
+function updateReports() {
+
+    const statusLines =
+        Object.entries(allStatus)
+        .map(([key, value]) =>
+            key + " : " + value
+        );
+
+    const errorLines =
+        Object.entries(allErrors)
+        .map(([key, value]) =>
+            key + " : " + value
+        );
+
+    document.getElementById("statusReport").textContent =
+        statusLines.length
+        ? statusLines.join("\n")
+        : "尚無資料";
+
+    document.getElementById("errorReport").textContent =
+        errorLines.length
+        ? errorLines.join("\n")
+        : "尚無錯誤";
+
+}
+
 async function request(url) {
 
-    const start = performance.now();
+    const startTime = performance.now();
 
-    try {
+    const controller =
+        new AbortController();
 
-        const controller = new AbortController();
-
-        const timer = setTimeout(() => {
+    const timeout =
+        setTimeout(() => {
             controller.abort();
         }, 10000);
 
-        const response = await fetch(
-            url + (url.includes("?") ? "&" : "?") + "_test=" + Date.now() + Math.random(),
-            {
+    const testURL =
+        url +
+        (url.includes("?") ? "&" : "?") +
+        "_loadtest=" +
+        Date.now() +
+        Math.random().toString(36).slice(2);
+
+    try {
+
+        const response =
+            await fetch(testURL, {
                 method: "GET",
                 cache: "no-store",
                 signal: controller.signal
-            }
-        );
+            });
 
-        clearTimeout(timer);
+        clearTimeout(timeout);
+
+        const time =
+            performance.now() - startTime;
+
+        addStatus(response.status);
 
         return {
             success: response.ok,
             status: response.status,
-            time: performance.now() - start
+            time,
+            error: null
         };
 
     } catch (error) {
 
+        clearTimeout(timeout);
+
+        const time =
+            performance.now() - startTime;
+
+        let type = "Network / CORS Error";
+
+        if (error.name === "AbortError") {
+            type = "Timeout";
+        }
+
+        addError(type);
+
         return {
             success: false,
-            status: "ERR",
-            time: performance.now() - start
+            status: "ERROR",
+            time,
+            error: type
         };
 
     }
@@ -300,9 +431,11 @@ async function request(url) {
 
 async function runStage(url, concurrency, seconds) {
 
-    const startTime = performance.now();
+    const startTime =
+        performance.now();
 
-    const endTime = startTime + seconds * 1000;
+    const endTime =
+        startTime + seconds * 1000;
 
     const times = [];
 
@@ -310,13 +443,15 @@ async function runStage(url, concurrency, seconds) {
     let success = 0;
     let fail = 0;
 
-    const statuses = {};
-
     async function worker() {
 
-        while (performance.now() < endTime && running) {
+        while (
+            performance.now() < endTime &&
+            running
+        ) {
 
-            const result = await request(url);
+            const result =
+                await request(url);
 
             total++;
 
@@ -328,10 +463,14 @@ async function runStage(url, concurrency, seconds) {
                 fail++;
             }
 
-            statuses[result.status] =
-                (statuses[result.status] || 0) + 1;
+            updateLive(
+                total,
+                success,
+                fail,
+                times
+            );
 
-            updateLive(total, success, fail, times);
+            updateReports();
 
         }
 
@@ -339,22 +478,46 @@ async function runStage(url, concurrency, seconds) {
 
     const workers = [];
 
-    for (let i = 0; i < concurrency; i++) {
+    for (
+        let i = 0;
+        i < concurrency;
+        i++
+    ) {
         workers.push(worker());
     }
 
     await Promise.all(workers);
 
-    const elapsed = (performance.now() - startTime) / 1000;
+    const elapsed =
+        (performance.now() - startTime) / 1000;
 
     const average =
         times.length
-        ? times.reduce((a,b) => a+b, 0) / times.length
+        ? times.reduce((a, b) => a + b, 0)
+          / times.length
         : 0;
 
-    const p95 = percentile([...times], 0.95);
+    const p50 =
+        percentile(times, .50);
 
-    const rps = total / elapsed;
+    const p95 =
+        percentile(times, .95);
+
+    const p99 =
+        percentile(times, .99);
+
+    const fastest =
+        times.length
+        ? Math.min(...times)
+        : 0;
+
+    const slowest =
+        times.length
+        ? Math.max(...times)
+        : 0;
+
+    const rps =
+        total / elapsed;
 
     return {
         concurrency,
@@ -362,69 +525,175 @@ async function runStage(url, concurrency, seconds) {
         success,
         fail,
         average,
+        p50,
         p95,
-        rps,
-        statuses
+        p99,
+        fastest,
+        slowest,
+        rps
     };
 
 }
 
-function updateLive(total, success, fail, times) {
+function updateLive(
+    total,
+    success,
+    fail,
+    times
+) {
 
-    document.getElementById("total").textContent = total;
-    document.getElementById("success").textContent = success;
-    document.getElementById("fail").textContent = fail;
+    document.getElementById("total").textContent =
+        total;
 
-    if (times.length) {
+    document.getElementById("success").textContent =
+        success;
 
-        const average =
-            times.reduce((a,b) => a+b, 0) / times.length;
+    document.getElementById("fail").textContent =
+        fail;
 
-        document.getElementById("avg").textContent =
-            Math.round(average) + " ms";
-
-        document.getElementById("p95").textContent =
-            Math.round(percentile([...times], 0.95)) + " ms";
-
+    if (!times.length) {
+        return;
     }
+
+    const average =
+        times.reduce((a, b) => a + b, 0)
+        / times.length;
+
+    const p95 =
+        percentile(times, .95);
+
+    document.getElementById("avg").textContent =
+        Math.round(average) + " ms";
+
+    document.getElementById("p95").textContent =
+        Math.round(p95) + " ms";
+
+}
+
+function addResult(result, state) {
+
+    const row =
+        document.createElement("tr");
+
+    row.innerHTML = `
+        <td>${result.concurrency}</td>
+        <td>${result.total}</td>
+        <td>${result.success}</td>
+        <td>${result.fail}</td>
+        <td>${result.rps.toFixed(2)}</td>
+        <td>${Math.round(result.average)} ms</td>
+        <td>${Math.round(result.p50)} ms</td>
+        <td>${Math.round(result.p95)} ms</td>
+        <td>${Math.round(result.p99)} ms</td>
+        <td>${Math.round(result.fastest)} ms</td>
+        <td>${Math.round(result.slowest)} ms</td>
+        <td>${state}</td>
+    `;
+
+    document
+        .getElementById("results")
+        .appendChild(row);
 
 }
 
 async function startTest() {
 
-    if (running) return;
+    if (running) {
+        return;
+    }
 
     const url =
-        document.getElementById("url").value.trim();
+        document.getElementById("url")
+        .value
+        .trim();
 
     const start =
-        Number(document.getElementById("start").value);
+        Number(
+            document.getElementById("start").value
+        );
 
     const step =
-        Number(document.getElementById("step").value);
+        Number(
+            document.getElementById("step").value
+        );
 
     const max =
-        Number(document.getElementById("max").value);
+        Number(
+            document.getElementById("max").value
+        );
 
     const seconds =
-        Number(document.getElementById("seconds").value);
+        Number(
+            document.getElementById("seconds").value
+        );
 
     if (!url) {
         alert("請輸入網址");
         return;
     }
 
+    if (
+        start < 1 ||
+        step < 1 ||
+        max < start ||
+        seconds < 1
+    ) {
+        alert("測試參數不正確");
+        return;
+    }
+
     running = true;
 
-    document.getElementById("startBtn").disabled = true;
+    allStatus = {};
+    allErrors = {};
 
-    document.getElementById("results").innerHTML = "";
+    document.getElementById("startBtn")
+        .disabled = true;
 
-    document.getElementById("message").innerHTML = "";
+    document.getElementById("results")
+        .innerHTML = "";
+
+    document.getElementById("message")
+        .innerHTML = "";
+
+    document.getElementById("bar")
+        .style.width = "0%";
+
+    document.getElementById("total")
+        .textContent = "0";
+
+    document.getElementById("success")
+        .textContent = "0";
+
+    document.getElementById("fail")
+        .textContent = "0";
+
+    document.getElementById("rps")
+        .textContent = "0";
+
+    document.getElementById("avg")
+        .textContent = "0 ms";
+
+    document.getElementById("p95")
+        .textContent = "0 ms";
+
+    document.getElementById("testInfo")
+        .textContent =
+        "測試網址：\n" +
+        url +
+        "\n\n開始並發：" +
+        start +
+        "\n每階段增加：" +
+        step +
+        "\n最高並發：" +
+        max +
+        "\n每階段：" +
+        seconds +
+        " 秒";
 
     let previousP95 = 0;
 
-    let stageNumber = 0;
+    let detected = false;
 
     for (
         let concurrency = start;
@@ -432,13 +701,18 @@ async function startTest() {
         concurrency += step
     ) {
 
-        stageNumber++;
-
-        document.getElementById("status").textContent =
-            "正在測試 " + concurrency + " 個並發使用者";
+        document.getElementById("status")
+            .textContent =
+            "正在測試 " +
+            concurrency +
+            " 個並發";
 
         const result =
-            await runStage(url, concurrency, seconds);
+            await runStage(
+                url,
+                concurrency,
+                seconds
+            );
 
         const errorRate =
             result.total
@@ -448,7 +722,7 @@ async function startTest() {
         let state = "正常";
 
         if (
-            errorRate >= 0.1 ||
+            errorRate >= .10 ||
             result.p95 >= 3000 ||
             (
                 previousP95 > 0 &&
@@ -456,52 +730,43 @@ async function startTest() {
             )
         ) {
 
-            state = "開始明顯變慢";
+            state = "開始退化";
+            detected = true;
 
         }
 
-        const row =
-            document.createElement("tr");
+        addResult(result, state);
 
-        row.innerHTML = `
-            <td>${result.concurrency}</td>
-            <td>${result.total}</td>
-            <td>${result.success}</td>
-            <td>${result.fail}</td>
-            <td>${result.rps.toFixed(2)}</td>
-            <td>${Math.round(result.average)} ms</td>
-            <td>${Math.round(result.p95)} ms</td>
-            <td>${state}</td>
-        `;
-
-        document
-            .getElementById("results")
-            .appendChild(row);
-
-        document.getElementById("rps").textContent =
+        document.getElementById("rps")
+            .textContent =
             result.rps.toFixed(2);
-
-        previousP95 = result.p95;
 
         const progress =
             Math.min(
                 100,
-                (concurrency / max) * 100
+                concurrency / max * 100
             );
 
-        document.getElementById("bar").style.width =
+        document.getElementById("bar")
+            .style.width =
             progress + "%";
 
-        if (state === "開始明顯變慢") {
+        previousP95 =
+            result.p95;
 
-            document.getElementById("message").innerHTML =
+        if (detected) {
+
+            document.getElementById("message")
+                .innerHTML =
                 `<div class="warning">
-                    在 <b>${concurrency}</b> 個並發使用者時，
-                    開始出現明顯延遲或錯誤。
+                    在 <b>${concurrency}</b>
+                    個並發時開始出現明顯退化。
+                    <br><br>
+                    這代表本次瀏覽器測試觀察到延遲或錯誤率明顯增加，
+                    不代表伺服器一定已經完全停止服務。
                 </div>`;
 
             break;
-
         }
 
         await sleep(500);
@@ -510,20 +775,25 @@ async function startTest() {
 
     running = false;
 
-    document.getElementById("startBtn").disabled = false;
+    document.getElementById("startBtn")
+        .disabled = false;
 
-    document.getElementById("status").textContent =
+    document.getElementById("status")
+        .textContent =
         "測試完成";
 
-    if (!document.getElementById("message").innerHTML) {
+    if (!detected) {
 
-        document.getElementById("message").innerHTML =
+        document.getElementById("message")
+            .innerHTML =
             `<div class="good">
-                在本次設定的最高並發數內，
-                沒有偵測到明顯的延遲或錯誤。
+                在設定的最高並發數內，
+                本次測試沒有偵測到明顯退化。
             </div>`;
 
     }
+
+    updateReports();
 
 }
 
