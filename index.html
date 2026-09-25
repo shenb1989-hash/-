@@ -181,4 +181,353 @@ th, td {
 
 <div class="stat">
 成功
-<b id="
+<b id="success">0</b>
+</div>
+
+<div class="stat">
+失敗
+<b id="fail">0</b>
+</div>
+
+<div class="stat">
+RPS
+<b id="rps">0</b>
+</div>
+
+<div class="stat">
+平均延遲
+<b id="avg">0 ms</b>
+</div>
+
+<div class="stat">
+P95
+<b id="p95">0 ms</b>
+</div>
+
+</div>
+
+<div id="message"></div>
+
+</div>
+
+<div class="card">
+
+<h2>詳細測試結果</h2>
+
+<table>
+
+<thead>
+<tr>
+<th>並發</th>
+<th>請求</th>
+<th>成功</th>
+<th>失敗</th>
+<th>RPS</th>
+<th>平均</th>
+<th>P95</th>
+<th>狀態</th>
+</tr>
+</thead>
+
+<tbody id="results"></tbody>
+
+</table>
+
+</div>
+
+</div>
+
+<script>
+
+let running = false;
+
+function percentile(values, p) {
+
+    if (!values.length) return 0;
+
+    values.sort((a,b) => a-b);
+
+    const index = Math.ceil(values.length * p) - 1;
+
+    return values[Math.max(0, index)];
+
+}
+
+function sleep(ms) {
+    return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+async function request(url) {
+
+    const start = performance.now();
+
+    try {
+
+        const controller = new AbortController();
+
+        const timer = setTimeout(() => {
+            controller.abort();
+        }, 10000);
+
+        const response = await fetch(
+            url + (url.includes("?") ? "&" : "?") + "_test=" + Date.now() + Math.random(),
+            {
+                method: "GET",
+                cache: "no-store",
+                signal: controller.signal
+            }
+        );
+
+        clearTimeout(timer);
+
+        return {
+            success: response.ok,
+            status: response.status,
+            time: performance.now() - start
+        };
+
+    } catch (error) {
+
+        return {
+            success: false,
+            status: "ERR",
+            time: performance.now() - start
+        };
+
+    }
+
+}
+
+async function runStage(url, concurrency, seconds) {
+
+    const startTime = performance.now();
+
+    const endTime = startTime + seconds * 1000;
+
+    const times = [];
+
+    let total = 0;
+    let success = 0;
+    let fail = 0;
+
+    const statuses = {};
+
+    async function worker() {
+
+        while (performance.now() < endTime && running) {
+
+            const result = await request(url);
+
+            total++;
+
+            times.push(result.time);
+
+            if (result.success) {
+                success++;
+            } else {
+                fail++;
+            }
+
+            statuses[result.status] =
+                (statuses[result.status] || 0) + 1;
+
+            updateLive(total, success, fail, times);
+
+        }
+
+    }
+
+    const workers = [];
+
+    for (let i = 0; i < concurrency; i++) {
+        workers.push(worker());
+    }
+
+    await Promise.all(workers);
+
+    const elapsed = (performance.now() - startTime) / 1000;
+
+    const average =
+        times.length
+        ? times.reduce((a,b) => a+b, 0) / times.length
+        : 0;
+
+    const p95 = percentile([...times], 0.95);
+
+    const rps = total / elapsed;
+
+    return {
+        concurrency,
+        total,
+        success,
+        fail,
+        average,
+        p95,
+        rps,
+        statuses
+    };
+
+}
+
+function updateLive(total, success, fail, times) {
+
+    document.getElementById("total").textContent = total;
+    document.getElementById("success").textContent = success;
+    document.getElementById("fail").textContent = fail;
+
+    if (times.length) {
+
+        const average =
+            times.reduce((a,b) => a+b, 0) / times.length;
+
+        document.getElementById("avg").textContent =
+            Math.round(average) + " ms";
+
+        document.getElementById("p95").textContent =
+            Math.round(percentile([...times], 0.95)) + " ms";
+
+    }
+
+}
+
+async function startTest() {
+
+    if (running) return;
+
+    const url =
+        document.getElementById("url").value.trim();
+
+    const start =
+        Number(document.getElementById("start").value);
+
+    const step =
+        Number(document.getElementById("step").value);
+
+    const max =
+        Number(document.getElementById("max").value);
+
+    const seconds =
+        Number(document.getElementById("seconds").value);
+
+    if (!url) {
+        alert("請輸入網址");
+        return;
+    }
+
+    running = true;
+
+    document.getElementById("startBtn").disabled = true;
+
+    document.getElementById("results").innerHTML = "";
+
+    document.getElementById("message").innerHTML = "";
+
+    let previousP95 = 0;
+
+    let stageNumber = 0;
+
+    for (
+        let concurrency = start;
+        concurrency <= max && running;
+        concurrency += step
+    ) {
+
+        stageNumber++;
+
+        document.getElementById("status").textContent =
+            "正在測試 " + concurrency + " 個並發使用者";
+
+        const result =
+            await runStage(url, concurrency, seconds);
+
+        const errorRate =
+            result.total
+            ? result.fail / result.total
+            : 0;
+
+        let state = "正常";
+
+        if (
+            errorRate >= 0.1 ||
+            result.p95 >= 3000 ||
+            (
+                previousP95 > 0 &&
+                result.p95 >= previousP95 * 2
+            )
+        ) {
+
+            state = "開始明顯變慢";
+
+        }
+
+        const row =
+            document.createElement("tr");
+
+        row.innerHTML = `
+            <td>${result.concurrency}</td>
+            <td>${result.total}</td>
+            <td>${result.success}</td>
+            <td>${result.fail}</td>
+            <td>${result.rps.toFixed(2)}</td>
+            <td>${Math.round(result.average)} ms</td>
+            <td>${Math.round(result.p95)} ms</td>
+            <td>${state}</td>
+        `;
+
+        document
+            .getElementById("results")
+            .appendChild(row);
+
+        document.getElementById("rps").textContent =
+            result.rps.toFixed(2);
+
+        previousP95 = result.p95;
+
+        const progress =
+            Math.min(
+                100,
+                (concurrency / max) * 100
+            );
+
+        document.getElementById("bar").style.width =
+            progress + "%";
+
+        if (state === "開始明顯變慢") {
+
+            document.getElementById("message").innerHTML =
+                `<div class="warning">
+                    在 <b>${concurrency}</b> 個並發使用者時，
+                    開始出現明顯延遲或錯誤。
+                </div>`;
+
+            break;
+
+        }
+
+        await sleep(500);
+
+    }
+
+    running = false;
+
+    document.getElementById("startBtn").disabled = false;
+
+    document.getElementById("status").textContent =
+        "測試完成";
+
+    if (!document.getElementById("message").innerHTML) {
+
+        document.getElementById("message").innerHTML =
+            `<div class="good">
+                在本次設定的最高並發數內，
+                沒有偵測到明顯的延遲或錯誤。
+            </div>`;
+
+    }
+
+}
+
+</script>
+
+</body>
+</html>
