@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Web Scraper｜網站公開資訊分析器</title>
+<title>網站負載測試工具</title>
 
 <style>
 * {
@@ -12,161 +12,77 @@
 
 body {
     margin: 0;
-    padding: 25px 15px;
-    background: #f4f6f8;
-    font-family: Arial, "Noto Sans TC", sans-serif;
-    color: #1f2937;
+    padding: 30px 15px;
+    background: #f5f7fa;
+    font-family: Arial, sans-serif;
 }
 
 .container {
-    width: 100%;
-    max-width: 1100px;
+    max-width: 650px;
     margin: auto;
+    background: white;
+    padding: 25px;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,.08);
 }
 
-h1 {
-    text-align: center;
-    margin-bottom: 8px;
-}
-
-.subtitle {
-    text-align: center;
-    color: #6b7280;
-    margin-bottom: 25px;
-}
-
-.search {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 20px;
+h2 {
+    margin-top: 0;
 }
 
 input {
-    flex: 1;
-    padding: 14px;
-    border: 1px solid #d1d5db;
+    width: 100%;
+    padding: 12px;
+    margin: 7px 0 15px;
+    border: 1px solid #ccc;
     border-radius: 8px;
-    font-size: 16px;
-    outline: none;
-}
-
-input:focus {
-    border-color: #2563eb;
+    font-size: 15px;
 }
 
 button {
-    padding: 14px 25px;
+    padding: 12px 20px;
     border: 0;
     border-radius: 8px;
-    background: #2563eb;
-    color: white;
-    font-size: 16px;
     cursor: pointer;
+    margin-right: 8px;
 }
 
-button:hover {
-    background: #1d4ed8;
+.start {
+    background: #222;
+    color: white;
 }
 
-button:disabled {
-    background: #9ca3af;
-    cursor: not-allowed;
+.stop {
+    background: #ddd;
 }
 
-.card {
-    background: white;
-    padding: 20px;
-    margin: 15px 0;
+.stats {
+    margin-top: 20px;
+    padding: 15px;
+    background: #f5f5f5;
     border-radius: 10px;
-    box-shadow: 0 3px 12px rgba(0, 0, 0, .07);
+    line-height: 1.8;
 }
 
-.grid {
-    display: grid;
-    grid-template-columns:
-        repeat(auto-fit, minmax(220px, 1fr));
-    gap: 12px;
-}
-
-.item {
-    padding: 14px;
-    background: #f3f4f6;
-    border-radius: 8px;
-    word-break: break-word;
-}
-
-.item strong {
-    display: block;
-    margin-bottom: 7px;
-}
-
-pre {
-    background: #111827;
-    color: #e5e7eb;
-    padding: 15px;
-    border-radius: 8px;
-    overflow: auto;
-    max-height: 600px;
-    white-space: pre-wrap;
-    word-break: break-word;
-}
-
-.table-wrapper {
-    overflow-x: auto;
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-table {
+.progress {
     width: 100%;
-    border-collapse: collapse;
+    height: 12px;
+    background: #ddd;
+    border-radius: 10px;
+    overflow: hidden;
+    margin-top: 15px;
 }
 
-th,
-td {
-    padding: 10px;
-    border-bottom: 1px solid #e5e7eb;
-    text-align: left;
-    vertical-align: top;
-    word-break: break-word;
+.progress-bar {
+    height: 100%;
+    width: 0%;
+    background: #333;
+    transition: width .1s;
 }
 
-th {
-    background: #f3f4f6;
-}
-
-.status {
-    padding: 15px;
-    border-radius: 8px;
-    background: #eef2ff;
-}
-
-.error {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.loading {
-    text-align: center;
-    padding: 30px;
-}
-
-.badge {
-    display: inline-block;
-    padding: 4px 8px;
-    border-radius: 5px;
-    background: #e5e7eb;
-    font-size: 13px;
-}
-
-@media (max-width: 600px) {
-    .search {
-        flex-direction: column;
-    }
-
-    button {
-        width: 100%;
-    }
+#status {
+    margin-top: 15px;
+    font-weight: bold;
 }
 </style>
 </head>
@@ -175,815 +91,178 @@ th {
 
 <div class="container">
 
-<h1>Web Scraper</h1>
+<h2>網站負載測試工具</h2>
 
-<div class="subtitle">
-    網站公開資訊分析器
+<label>測試網址</label>
+<input
+    id="url"
+    type="url"
+    placeholder="https://example.com"
+>
+
+<label>最大請求次數</label>
+<input
+    id="maxRequests"
+    type="number"
+    value="100"
+    min="1"
+>
+
+<label>測試時間（秒）</label>
+<input
+    id="duration"
+    type="number"
+    value="10"
+    min="1"
+>
+
+<button class="start" onclick="startTest()">
+開始測試
+</button>
+
+<button class="stop" onclick="stopTest()">
+停止測試
+</button>
+
+<div class="progress">
+    <div id="progressBar" class="progress-bar"></div>
 </div>
 
-<div class="search">
-
-    <input
-        id="url"
-        type="url"
-        placeholder="https://example.com"
-    >
-
-    <button id="scanButton" onclick="scan()">
-        開始爬取
-    </button>
-
+<div class="stats">
+    <div>已發送：<span id="sent">0</span></div>
+    <div>成功：<span id="success">0</span></div>
+    <div>失敗：<span id="failed">0</span></div>
+    <div>剩餘時間：<span id="remaining">0</span> 秒</div>
 </div>
 
-<div id="result"></div>
+<div id="status">
+    尚未開始
+</div>
 
 </div>
 
 <script>
+let running = false;
+let sent = 0;
+let success = 0;
+let failed = 0;
 
-async function scan() {
+async function startTest() {
 
-    const input = document.getElementById("url");
-    const button = document.getElementById("scanButton");
-    const result = document.getElementById("result");
+    if (running) return;
 
-    let targetURL = input.value.trim();
+    const url = document.getElementById("url").value.trim();
+    const maxRequests =
+        Number(document.getElementById("maxRequests").value);
 
-    if (!targetURL) {
+    const duration =
+        Number(document.getElementById("duration").value);
 
-        showError("請輸入網站網址。");
-
+    if (!url) {
+        alert("請輸入網址");
         return;
     }
 
-    if (!/^https?:\/\//i.test(targetURL)) {
-
-        targetURL = "https://" + targetURL;
-    }
-
-    try {
-        new URL(targetURL);
-    } catch {
-
-        showError("網址格式不正確。");
-
+    if (maxRequests <= 0 || duration <= 0) {
+        alert("請輸入有效的數值");
         return;
     }
 
-    button.disabled = true;
+    running = true;
 
-    result.innerHTML = `
-        <div class="card loading">
-            正在爬取網站公開資料...
-        </div>
-    `;
+    sent = 0;
+    success = 0;
+    failed = 0;
 
-    try {
+    const startTime = Date.now();
+    const endTime = startTime + duration * 1000;
 
-        const proxyURL =
-            "https://api.allorigins.win/raw?url=" +
-            encodeURIComponent(targetURL);
+    updateUI(duration);
 
-        const response =
-            await fetch(proxyURL);
-
-        if (!response.ok) {
-
-            throw new Error(
-                `HTTP ${response.status}`
-            );
-        }
-
-        const html =
-            await response.text();
-
-        if (!html.trim()) {
-
-            throw new Error(
-                "網站沒有回傳 HTML"
-            );
-        }
-
-        const data =
-            parseHTML(
-                html,
-                targetURL
-            );
-
-        render(data, html);
-
-    } catch (error) {
-
-        showError(`
-            無法取得網站資料。
-
-            <br><br>
-
-            可能原因：
-            <br>
-            • 網站拒絕請求
-            <br>
-            • Proxy 無法取得該網站
-            <br>
-            • 網站需要登入
-            <br>
-            • 網站使用特殊防爬機制
-            <br>
-            • 網站暫時無法連線
-        `);
-
-    } finally {
-
-        button.disabled = false;
-    }
-}
-
-
-/**
- * 解析網站 HTML。
- */
-function parseHTML(html, baseURL) {
-
-    const parser =
-        new DOMParser();
-
-    const doc =
-        parser.parseFromString(
-            html,
-            "text/html"
-        );
-
-    const absoluteURL = value => {
+    while (
+        running &&
+        sent < maxRequests &&
+        Date.now() < endTime
+    ) {
 
         try {
 
-            return new URL(
-                value,
-                baseURL
-            ).href;
-
-        } catch {
-
-            return value;
-        }
-    };
-
-    const meta = name => {
-
-        return doc
-            .querySelector(
-                `meta[name="${name}"]`
-            )
-            ?.getAttribute("content") || "";
-    };
-
-    const property = name => {
-
-        return doc
-            .querySelector(
-                `meta[property="${name}"]`
-            )
-            ?.getAttribute("content") || "";
-    };
-
-
-    const links =
-        [...doc.querySelectorAll("a")]
-        .map(a => ({
-            text: a.innerText.trim(),
-            url: absoluteURL(
-                a.getAttribute("href") || ""
-            )
-        }))
-        .filter(item => item.url);
-
-
-    const images =
-        [...doc.querySelectorAll("img")]
-        .map(img => ({
-            url: absoluteURL(
-                img.getAttribute("src") || ""
-            ),
-            alt: img.getAttribute("alt") || "",
-            width: img.getAttribute("width") || "",
-            height: img.getAttribute("height") || ""
-        }));
-
-
-    const scripts =
-        [...doc.querySelectorAll("script[src]")]
-        .map(script =>
-            absoluteURL(
-                script.getAttribute("src")
-            )
-        );
-
-
-    const styles =
-        [...doc.querySelectorAll(
-            'link[rel="stylesheet"]'
-        )]
-        .map(link =>
-            absoluteURL(
-                link.getAttribute("href")
-            )
-        );
-
-
-    const headings =
-        [...doc.querySelectorAll(
-            "h1,h2,h3,h4,h5,h6"
-        )]
-        .map(element => ({
-            tag: element.tagName,
-            text: element.innerText.trim()
-        }))
-        .filter(item => item.text);
-
-
-    const forms =
-        [...doc.querySelectorAll("form")]
-        .map(form => ({
-            method:
-                (
-                    form.getAttribute("method")
-                    || "GET"
-                ).toUpperCase(),
-
-            action:
-                absoluteURL(
-                    form.getAttribute("action")
-                    || baseURL
-                )
-        }));
-
-
-    const buttons =
-        [...doc.querySelectorAll("button")]
-        .map(button =>
-            button.innerText.trim()
-        )
-        .filter(Boolean);
-
-
-    const text =
-        doc.body?.innerText
-        ?.replace(/\s+/g, " ")
-        .trim() || "";
-
-
-    const favicon =
-        doc.querySelector(
-            'link[rel~="icon"]'
-        );
-
-
-    return {
-
-        title:
-            doc.title,
-
-        description:
-            meta("description"),
-
-        keywords:
-            meta("keywords"),
-
-        author:
-            meta("author"),
-
-        robots:
-            meta("robots"),
-
-        language:
-            doc.documentElement.lang,
-
-        charset:
-            doc.characterSet,
-
-        canonical:
-            doc.querySelector(
-                'link[rel="canonical"]'
-            )?.href || "",
-
-        favicon:
-            favicon
-                ? absoluteURL(
-                    favicon.getAttribute("href")
-                )
-                : "",
-
-        openGraph: {
-
-            title:
-                property("og:title"),
-
-            description:
-                property("og:description"),
-
-            image:
-                absoluteURL(
-                    property("og:image")
-                ),
-
-            url:
-                property("og:url"),
-
-            type:
-                property("og:type")
-        },
-
-        links,
-
-        images,
-
-        scripts,
-
-        styles,
-
-        headings,
-
-        forms,
-
-        buttons,
-
-        textLength:
-            text.length,
-
-        htmlLength:
-            new Blob([html]).size
-    };
-}
-
-
-/**
- * 顯示結果。
- */
-function render(data, html) {
-
-    const result =
-        document.getElementById("result");
-
-    result.innerHTML = `
-
-        <div class="card">
-
-            <h2>基本資訊</h2>
-
-            <div class="grid">
-
-                ${item(
-                    "Title",
-                    data.title
-                )}
-
-                ${item(
-                    "Description",
-                    data.description
-                )}
-
-                ${item(
-                    "Language",
-                    data.language
-                )}
-
-                ${item(
-                    "Charset",
-                    data.charset
-                )}
-
-                ${item(
-                    "HTML 大小",
-                    formatBytes(data.htmlLength)
-                )}
-
-                ${item(
-                    "文字長度",
-                    data.textLength
-                )}
-
-                ${item(
-                    "連結數量",
-                    data.links.length
-                )}
-
-                ${item(
-                    "圖片數量",
-                    data.images.length
-                )}
-
-                ${item(
-                    "JavaScript",
-                    data.scripts.length
-                )}
-
-                ${item(
-                    "CSS",
-                    data.styles.length
-                )}
-
-                ${item(
-                    "Form",
-                    data.forms.length
-                )}
-
-                ${item(
-                    "Button",
-                    data.buttons.length
-                )}
-
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>SEO / Meta</h2>
-
-            <div class="grid">
-
-                ${item(
-                    "Description",
-                    data.description
-                )}
-
-                ${item(
-                    "Keywords",
-                    data.keywords
-                )}
-
-                ${item(
-                    "Author",
-                    data.author
-                )}
-
-                ${item(
-                    "Robots",
-                    data.robots
-                )}
-
-                ${item(
-                    "Canonical",
-                    data.canonical
-                )}
-
-                ${item(
-                    "Favicon",
-                    data.favicon
-                )}
-
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>Open Graph</h2>
-
-            <div class="grid">
-
-                ${item(
-                    "og:title",
-                    data.openGraph.title
-                )}
-
-                ${item(
-                    "og:description",
-                    data.openGraph.description
-                )}
-
-                ${item(
-                    "og:image",
-                    data.openGraph.image
-                )}
-
-                ${item(
-                    "og:url",
-                    data.openGraph.url
-                )}
-
-                ${item(
-                    "og:type",
-                    data.openGraph.type
-                )}
-
-            </div>
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>標題結構</h2>
-
-            ${
-                data.headings.length
-
-                ? data.headings.map(h => `
-                    <p>
-                        <span class="badge">
-                            ${h.tag}
-                        </span>
-
-                        ${escapeHTML(h.text)}
-                    </p>
-                `).join("")
-
-                : "沒有找到 H1～H6"
+            const response = await fetch(url, {
+                method: "GET",
+                cache: "no-store"
+            });
+
+            sent++;
+
+            if (response.ok) {
+                success++;
+            } else {
+                failed++;
             }
 
-        </div>
+        } catch (error) {
 
+            sent++;
+            failed++;
 
-        <div class="card">
+        }
 
-            <h2>
-                公開連結
-                (${data.links.length})
-            </h2>
-
-            ${renderLinks(data.links)}
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>
-                圖片
-                (${data.images.length})
-            </h2>
-
-            ${renderImages(data.images)}
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>
-                JavaScript
-                (${data.scripts.length})
-            </h2>
-
-            ${renderList(data.scripts)}
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>
-                CSS
-                (${data.styles.length})
-            </h2>
-
-            ${renderList(data.styles)}
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>
-                Form
-                (${data.forms.length})
-            </h2>
-
-            ${renderForms(data.forms)}
-
-        </div>
-
-
-        <div class="card">
-
-            <h2>HTML 原始碼</h2>
-
-            <pre>${escapeHTML(html)}</pre>
-
-        </div>
-    `;
-}
-
-
-function renderLinks(links) {
-
-    if (!links.length) {
-        return "沒有找到公開連結。";
+        updateUI(
+            Math.max(
+                0,
+                (endTime - Date.now()) / 1000
+            )
+        );
     }
 
-    return `
-        <div class="table-wrapper">
-
-            <table>
-
-                <thead>
-                    <tr>
-                        <th>文字</th>
-                        <th>URL</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    ${links.map(link => `
-                        <tr>
-
-                            <td>
-                                ${escapeHTML(link.text)}
-                            </td>
-
-                            <td>
-                                ${escapeHTML(link.url)}
-                            </td>
-
-                        </tr>
-                    `).join("")}
-
-                </tbody>
-
-            </table>
-
-        </div>
-    `;
-}
-
-
-function renderImages(images) {
-
-    if (!images.length) {
-        return "沒有找到圖片。";
+    if (running) {
+        running = false;
+        document.getElementById("status").textContent =
+            "測試完成";
+    } else {
+        document.getElementById("status").textContent =
+            "測試已停止";
     }
 
-    return `
-        <div class="table-wrapper">
-
-            <table>
-
-                <thead>
-                    <tr>
-                        <th>圖片 URL</th>
-                        <th>Alt</th>
-                        <th>尺寸</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    ${images.map(image => `
-                        <tr>
-
-                            <td>
-                                ${escapeHTML(image.url)}
-                            </td>
-
-                            <td>
-                                ${escapeHTML(image.alt)}
-                            </td>
-
-                            <td>
-                                ${escapeHTML(
-                                    image.width ||
-                                    image.height
-                                    ? `${image.width} × ${image.height}`
-                                    : "未指定"
-                                )}
-                            </td>
-
-                        </tr>
-                    `).join("")}
-
-                </tbody>
-
-            </table>
-
-        </div>
-    `;
+    updateUI(0);
 }
 
+function stopTest() {
 
-function renderForms(forms) {
+    if (!running) return;
 
-    if (!forms.length) {
-        return "沒有找到 Form。";
-    }
+    running = false;
 
-    return `
-        <div class="table-wrapper">
-
-            <table>
-
-                <thead>
-                    <tr>
-                        <th>Method</th>
-                        <th>Action</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    ${forms.map(form => `
-                        <tr>
-
-                            <td>
-                                ${escapeHTML(form.method)}
-                            </td>
-
-                            <td>
-                                ${escapeHTML(form.action)}
-                            </td>
-
-                        </tr>
-                    `).join("")}
-
-                </tbody>
-
-            </table>
-
-        </div>
-    `;
+    document.getElementById("status").textContent =
+        "正在停止...";
 }
 
+function updateUI(remaining) {
 
-function renderList(list) {
+    document.getElementById("sent").textContent =
+        sent;
 
-    if (!list.length) {
-        return "沒有找到。";
-    }
+    document.getElementById("success").textContent =
+        success;
 
-    return `
-        <div class="table-wrapper">
+    document.getElementById("failed").textContent =
+        failed;
 
-            ${list.map(value => `
-                <p>
-                    ${escapeHTML(value)}
-                </p>
-            `).join("")}
+    document.getElementById("remaining").textContent =
+        remaining.toFixed(1);
 
-        </div>
-    `;
+    const maxRequests =
+        Number(document.getElementById("maxRequests").value);
+
+    const progress =
+        Math.min(100, (sent / maxRequests) * 100);
+
+    document.getElementById("progressBar").style.width =
+        progress + "%";
+
+    document.getElementById("status").textContent =
+        running ? "測試進行中..." : "測試已停止";
 }
-
-
-function item(label, value) {
-
-    return `
-        <div class="item">
-
-            <strong>
-                ${escapeHTML(label)}
-            </strong>
-
-            ${escapeHTML(
-                value || "未提供"
-            )}
-
-        </div>
-    `;
-}
-
-
-function showError(message) {
-
-    document.getElementById("result")
-        .innerHTML = `
-            <div class="card error">
-                ${message}
-            </div>
-        `;
-}
-
-
-function escapeHTML(value) {
-
-    return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
-}
-
-
-function formatBytes(bytes) {
-
-    if (bytes < 1024) {
-        return `${bytes} Bytes`;
-    }
-
-    if (bytes < 1024 * 1024) {
-        return `${(
-            bytes / 1024
-        ).toFixed(2)} KB`;
-    }
-
-    return `${(
-        bytes / 1024 / 1024
-    ).toFixed(2)} MB`;
-}
-
 </script>
 
 </body>
