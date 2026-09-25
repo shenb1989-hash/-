@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>網站負載測試工具</title>
+<title>網站公開資訊檢測器</title>
 
 <style>
 * {
@@ -12,14 +12,14 @@
 
 body {
     margin: 0;
-    padding: 25px;
+    padding: 30px 15px;
+    background: #f5f7fa;
     font-family: Arial, sans-serif;
-    background: #f4f6f8;
     color: #222;
 }
 
 .container {
-    max-width: 1000px;
+    max-width: 900px;
     margin: auto;
 }
 
@@ -27,136 +27,61 @@ h1 {
     text-align: center;
 }
 
-.card {
-    background: white;
-    padding: 20px;
-    border-radius: 14px;
-    margin-bottom: 15px;
-    box-shadow: 0 3px 12px rgba(0,0,0,.08);
-}
-
-label {
-    display: block;
-    margin-top: 12px;
-    font-weight: bold;
+.input-box {
+    display: flex;
+    gap: 10px;
+    margin: 20px 0;
 }
 
 input {
-    width: 100%;
-    padding: 12px;
-    margin-top: 6px;
+    flex: 1;
+    padding: 13px;
     border: 1px solid #ccc;
     border-radius: 8px;
-    font-size: 16px;
 }
 
 button {
-    width: 100%;
-    padding: 14px;
-    margin-top: 18px;
+    padding: 13px 20px;
     border: 0;
     border-radius: 8px;
-    background: #111;
+    background: #222;
     color: white;
-    font-size: 16px;
     cursor: pointer;
 }
 
-button:disabled {
-    background: #999;
+button:hover {
+    opacity: 0.85;
 }
 
-.status {
-    text-align: center;
-    font-weight: bold;
-    margin: 15px 0;
-}
-
-.progress {
-    height: 12px;
-    background: #ddd;
-    border-radius: 20px;
-    overflow: hidden;
-}
-
-.bar {
-    height: 100%;
-    width: 0%;
-    background: #111;
-    transition: width .2s;
-}
-
-.grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 10px;
-}
-
-.stat {
-    padding: 15px;
-    background: #f1f3f5;
-    border-radius: 10px;
-}
-
-.stat b {
-    display: block;
-    font-size: 21px;
-    margin-top: 5px;
-}
-
-table {
-    width: 100%;
-    border-collapse: collapse;
+.card {
+    background: white;
+    padding: 20px;
     margin-top: 15px;
-    font-size: 14px;
-}
-
-th,
-td {
-    padding: 10px;
-    border-bottom: 1px solid #ddd;
-    text-align: center;
-}
-
-.warning {
-    padding: 15px;
-    background: #fff3cd;
     border-radius: 10px;
-    margin-top: 15px;
-}
-
-.good {
-    padding: 15px;
-    background: #d1e7dd;
-    border-radius: 10px;
-    margin-top: 15px;
-}
-
-.error {
-    padding: 15px;
-    background: #f8d7da;
-    border-radius: 10px;
-    margin-top: 15px;
+    box-shadow: 0 2px 10px rgba(0,0,0,.06);
 }
 
 pre {
     white-space: pre-wrap;
     word-break: break-all;
-    background: #111;
-    color: #eee;
+    background: #f1f3f5;
     padding: 15px;
     border-radius: 8px;
     overflow-x: auto;
 }
 
-@media (max-width: 700px) {
-    .grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+.item {
+    padding: 8px 0;
+    border-bottom: 1px solid #eee;
+    word-break: break-all;
+}
 
-    table {
-        font-size: 12px;
-    }
+.error {
+    color: #c62828;
+}
+
+.success {
+    color: #2e7d32;
 }
 </style>
 </head>
@@ -165,638 +90,299 @@ pre {
 
 <div class="container">
 
-<h1>網站負載測試工具</h1>
+<h1>網站公開資訊檢測器</h1>
 
-<div class="card">
-
-<label>測試網址</label>
-<input id="url" value="https://ssjh.tc.edu.tw/">
-
-<label>開始並發數</label>
-<input id="start" type="number" value="5" min="1" max="100">
-
-<label>每階段增加</label>
-<input id="step" type="number" value="5" min="1" max="50">
-
-<label>最高並發數</label>
-<input id="max" type="number" value="50" min="1" max="100">
-
-<label>每階段測試秒數</label>
-<input id="seconds" type="number" value="5" min="1" max="30">
-
-<button id="startBtn" onclick="startTest()">開始測試</button>
-
+<div class="input-box">
+    <input
+        id="url"
+        type="url"
+        placeholder="https://example.edu.tw"
+    >
+    <button onclick="scanWebsite()">開始檢測</button>
 </div>
 
-<div class="card">
-
-<div class="status" id="status">尚未開始</div>
-
-<div class="progress">
-<div class="bar" id="bar"></div>
-</div>
-
-</div>
-
-<div class="card">
-
-<h2>即時結果</h2>
-
-<div class="grid">
-
-<div class="stat">
-總請求
-<b id="total">0</b>
-</div>
-
-<div class="stat">
-成功
-<b id="success">0</b>
-</div>
-
-<div class="stat">
-失敗
-<b id="fail">0</b>
-</div>
-
-<div class="stat">
-RPS
-<b id="rps">0</b>
-</div>
-
-<div class="stat">
-平均延遲
-<b id="avg">0 ms</b>
-</div>
-
-<div class="stat">
-P95
-<b id="p95">0 ms</b>
-</div>
-
-</div>
-
-<div id="message"></div>
-
-</div>
-
-<div class="card">
-
-<h2>詳細測試結果</h2>
-
-<table>
-
-<thead>
-<tr>
-<th>並發</th>
-<th>請求</th>
-<th>成功</th>
-<th>失敗</th>
-<th>RPS</th>
-<th>平均</th>
-<th>P50</th>
-<th>P95</th>
-<th>P99</th>
-<th>最快</th>
-<th>最慢</th>
-<th>狀態</th>
-</tr>
-</thead>
-
-<tbody id="results"></tbody>
-
-</table>
-
-</div>
-
-<div class="card">
-
-<h2>HTTP Status 統計</h2>
-
-<pre id="statusReport">尚無資料</pre>
-
-</div>
-
-<div class="card">
-
-<h2>錯誤統計</h2>
-
-<pre id="errorReport">尚無資料</pre>
-
-</div>
-
-<div class="card">
-
-<h2>測試資訊</h2>
-
-<pre id="testInfo">尚未開始</pre>
-
-</div>
+<div id="result"></div>
 
 </div>
 
 <script>
+async function fetchText(url) {
+    const response = await fetch(url, {
+        method: "GET"
+    });
 
-let running = false;
-
-let allStatus = {};
-
-let allErrors = {};
-
-function sleep(ms) {
-    return new Promise(resolve => setTimeout(resolve, ms));
-}
-
-function percentile(values, p) {
-
-    if (!values.length) {
-        return 0;
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
     }
 
-    const sorted = [...values].sort((a, b) => a - b);
-
-    const index =
-        Math.ceil(sorted.length * p) - 1;
-
-    return sorted[Math.max(0, index)];
+    return {
+        response,
+        text: await response.text()
+    };
 }
 
-function addStatus(status) {
+function normalizeUrl(url) {
+    url = url.trim();
 
-    allStatus[status] =
-        (allStatus[status] || 0) + 1;
+    if (!/^https?:\/\//i.test(url)) {
+        url = "https://" + url;
+    }
 
+    return new URL(url);
 }
 
-function addError(error) {
+function extractLinks(document, baseUrl) {
+    const links = [];
 
-    allErrors[error] =
-        (allErrors[error] || 0) + 1;
+    document.querySelectorAll("a[href]").forEach(a => {
+        try {
+            const url = new URL(a.getAttribute("href"), baseUrl);
 
+            if (!links.includes(url.href)) {
+                links.push(url.href);
+            }
+        } catch {}
+    });
+
+    return links;
 }
 
-function updateReports() {
+function extractScripts(document, baseUrl) {
+    const scripts = [];
 
-    const statusLines =
-        Object.entries(allStatus)
-        .map(([key, value]) =>
-            key + " : " + value
-        );
+    document.querySelectorAll("script[src]").forEach(script => {
+        try {
+            const url = new URL(
+                script.getAttribute("src"),
+                baseUrl
+            );
 
-    const errorLines =
-        Object.entries(allErrors)
-        .map(([key, value]) =>
-            key + " : " + value
-        );
+            if (!scripts.includes(url.href)) {
+                scripts.push(url.href);
+            }
+        } catch {}
+    });
 
-    document.getElementById("statusReport").textContent =
-        statusLines.length
-        ? statusLines.join("\n")
-        : "尚無資料";
-
-    document.getElementById("errorReport").textContent =
-        errorLines.length
-        ? errorLines.join("\n")
-        : "尚無錯誤";
-
+    return scripts;
 }
 
-async function request(url) {
+function extractPublicEndpoints(text) {
+    const endpoints = new Set();
 
-    const startTime = performance.now();
+    const patterns = [
+        /https?:\/\/[^\s"'<>]+/gi,
+        /\/api\/[A-Za-z0-9_?&=./%-]+/gi,
+        /\/graphql(?:\/[A-Za-z0-9_?&=./%-]*)?/gi,
+        /\/v[0-9]+\/[A-Za-z0-9_?&=./%-]+/gi
+    ];
 
-    const controller =
-        new AbortController();
+    for (const pattern of patterns) {
+        const matches = text.match(pattern) || [];
 
-    const timeout =
-        setTimeout(() => {
-            controller.abort();
-        }, 10000);
+        matches.forEach(match => {
+            endpoints.add(match);
+        });
+    }
 
-    const testURL =
-        url +
-        (url.includes("?") ? "&" : "?") +
-        "_loadtest=" +
-        Date.now() +
-        Math.random().toString(36).slice(2);
+    return [...endpoints];
+}
+
+function renderList(items) {
+    if (!items.length) {
+        return "<div>沒有找到公開項目</div>";
+    }
+
+    return items
+        .map(item => `<div class="item">${escapeHtml(item)}</div>`)
+        .join("");
+}
+
+function escapeHtml(value) {
+    return value
+        .replaceAll("&", "&amp;")
+        .replaceAll("<", "&lt;")
+        .replaceAll(">", "&gt;")
+        .replaceAll('"', "&quot;")
+        .replaceAll("'", "&#039;");
+}
+
+async function scanWebsite() {
+
+    const result = document.getElementById("result");
+    const input = document.getElementById("url").value;
+
+    if (!input) {
+        result.innerHTML = `
+            <div class="card error">
+                請輸入網站 URL
+            </div>
+        `;
+        return;
+    }
+
+    let target;
+
+    try {
+        target = normalizeUrl(input);
+    } catch {
+        result.innerHTML = `
+            <div class="card error">
+                URL 格式錯誤
+            </div>
+        `;
+        return;
+    }
+
+    result.innerHTML = `
+        <div class="card">
+            正在檢測：
+            <strong>${escapeHtml(target.href)}</strong>
+        </div>
+    `;
 
     try {
 
-        const response =
-            await fetch(testURL, {
-                method: "GET",
-                cache: "no-store",
-                signal: controller.signal
-            });
+        const { response, text } = await fetchText(target.href);
 
-        clearTimeout(timeout);
+        const parser = new DOMParser();
+        const document = parser.parseFromString(
+            text,
+            "text/html"
+        );
 
-        const time =
-            performance.now() - startTime;
+        const links = extractLinks(
+            document,
+            target.href
+        );
 
-        addStatus(response.status);
+        const scripts = extractScripts(
+            document,
+            target.href
+        );
 
-        return {
-            success: response.ok,
-            status: response.status,
-            time,
-            error: null
-        };
+        const endpoints = extractPublicEndpoints(text);
+
+        const robotsUrl =
+            new URL("/robots.txt", target.origin).href;
+
+        const sitemapUrl =
+            new URL("/sitemap.xml", target.origin).href;
+
+        let robotsStatus = "無法讀取";
+
+        try {
+            const robotsResponse =
+                await fetch(robotsUrl);
+
+            robotsStatus =
+                `HTTP ${robotsResponse.status}`;
+        } catch {}
+
+        let sitemapStatus = "無法讀取";
+
+        try {
+            const sitemapResponse =
+                await fetch(sitemapUrl);
+
+            sitemapStatus =
+                `HTTP ${sitemapResponse.status}`;
+        } catch {}
+
+        result.innerHTML = `
+
+            <div class="card">
+                <h2>基本資訊</h2>
+
+                <div class="item">
+                    輸入 URL：
+                    ${escapeHtml(input)}
+                </div>
+
+                <div class="item">
+                    標準化 URL：
+                    ${escapeHtml(target.href)}
+                </div>
+
+                <div class="item">
+                    Origin：
+                    ${escapeHtml(target.origin)}
+                </div>
+
+                <div class="item">
+                    HTTP Status：
+                    ${response.status}
+                </div>
+
+                <div class="item">
+                    Content-Type：
+                    ${escapeHtml(
+                        response.headers.get("content-type") || "未知"
+                    )}
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>robots.txt</h2>
+
+                <div class="item">
+                    ${escapeHtml(robotsUrl)}
+                </div>
+
+                <div class="item">
+                    ${escapeHtml(robotsStatus)}
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>sitemap.xml</h2>
+
+                <div class="item">
+                    ${escapeHtml(sitemapUrl)}
+                </div>
+
+                <div class="item">
+                    ${escapeHtml(sitemapStatus)}
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>公開頁面連結 (${links.length})</h2>
+
+                ${renderList(links)}
+            </div>
+
+            <div class="card">
+                <h2>公開 JavaScript (${scripts.length})</h2>
+
+                ${renderList(scripts)}
+            </div>
+
+            <div class="card">
+                <h2>疑似公開 Endpoint (${endpoints.length})</h2>
+
+                ${renderList(endpoints)}
+            </div>
+
+        `;
 
     } catch (error) {
 
-        clearTimeout(timeout);
+        result.innerHTML = `
+            <div class="card error">
+                <h2>檢測失敗</h2>
 
-        const time =
-            performance.now() - startTime;
+                <p>
+                    ${escapeHtml(error.message)}
+                </p>
 
-        let type = "Network / CORS Error";
-
-        if (error.name === "AbortError") {
-            type = "Timeout";
-        }
-
-        addError(type);
-
-        return {
-            success: false,
-            status: "ERROR",
-            time,
-            error: type
-        };
-
+                <p>
+                    常見原因：網站禁止跨來源請求（CORS）、
+                    網站要求登入，或伺服器拒絕瀏覽器直接存取。
+                </p>
+            </div>
+        `;
     }
-
 }
-
-async function runStage(url, concurrency, seconds) {
-
-    const startTime =
-        performance.now();
-
-    const endTime =
-        startTime + seconds * 1000;
-
-    const times = [];
-
-    let total = 0;
-    let success = 0;
-    let fail = 0;
-
-    async function worker() {
-
-        while (
-            performance.now() < endTime &&
-            running
-        ) {
-
-            const result =
-                await request(url);
-
-            total++;
-
-            times.push(result.time);
-
-            if (result.success) {
-                success++;
-            } else {
-                fail++;
-            }
-
-            updateLive(
-                total,
-                success,
-                fail,
-                times
-            );
-
-            updateReports();
-
-        }
-
-    }
-
-    const workers = [];
-
-    for (
-        let i = 0;
-        i < concurrency;
-        i++
-    ) {
-        workers.push(worker());
-    }
-
-    await Promise.all(workers);
-
-    const elapsed =
-        (performance.now() - startTime) / 1000;
-
-    const average =
-        times.length
-        ? times.reduce((a, b) => a + b, 0)
-          / times.length
-        : 0;
-
-    const p50 =
-        percentile(times, .50);
-
-    const p95 =
-        percentile(times, .95);
-
-    const p99 =
-        percentile(times, .99);
-
-    const fastest =
-        times.length
-        ? Math.min(...times)
-        : 0;
-
-    const slowest =
-        times.length
-        ? Math.max(...times)
-        : 0;
-
-    const rps =
-        total / elapsed;
-
-    return {
-        concurrency,
-        total,
-        success,
-        fail,
-        average,
-        p50,
-        p95,
-        p99,
-        fastest,
-        slowest,
-        rps
-    };
-
-}
-
-function updateLive(
-    total,
-    success,
-    fail,
-    times
-) {
-
-    document.getElementById("total").textContent =
-        total;
-
-    document.getElementById("success").textContent =
-        success;
-
-    document.getElementById("fail").textContent =
-        fail;
-
-    if (!times.length) {
-        return;
-    }
-
-    const average =
-        times.reduce((a, b) => a + b, 0)
-        / times.length;
-
-    const p95 =
-        percentile(times, .95);
-
-    document.getElementById("avg").textContent =
-        Math.round(average) + " ms";
-
-    document.getElementById("p95").textContent =
-        Math.round(p95) + " ms";
-
-}
-
-function addResult(result, state) {
-
-    const row =
-        document.createElement("tr");
-
-    row.innerHTML = `
-        <td>${result.concurrency}</td>
-        <td>${result.total}</td>
-        <td>${result.success}</td>
-        <td>${result.fail}</td>
-        <td>${result.rps.toFixed(2)}</td>
-        <td>${Math.round(result.average)} ms</td>
-        <td>${Math.round(result.p50)} ms</td>
-        <td>${Math.round(result.p95)} ms</td>
-        <td>${Math.round(result.p99)} ms</td>
-        <td>${Math.round(result.fastest)} ms</td>
-        <td>${Math.round(result.slowest)} ms</td>
-        <td>${state}</td>
-    `;
-
-    document
-        .getElementById("results")
-        .appendChild(row);
-
-}
-
-async function startTest() {
-
-    if (running) {
-        return;
-    }
-
-    const url =
-        document.getElementById("url")
-        .value
-        .trim();
-
-    const start =
-        Number(
-            document.getElementById("start").value
-        );
-
-    const step =
-        Number(
-            document.getElementById("step").value
-        );
-
-    const max =
-        Number(
-            document.getElementById("max").value
-        );
-
-    const seconds =
-        Number(
-            document.getElementById("seconds").value
-        );
-
-    if (!url) {
-        alert("請輸入網址");
-        return;
-    }
-
-    if (
-        start < 1 ||
-        step < 1 ||
-        max < start ||
-        seconds < 1
-    ) {
-        alert("測試參數不正確");
-        return;
-    }
-
-    running = true;
-
-    allStatus = {};
-    allErrors = {};
-
-    document.getElementById("startBtn")
-        .disabled = true;
-
-    document.getElementById("results")
-        .innerHTML = "";
-
-    document.getElementById("message")
-        .innerHTML = "";
-
-    document.getElementById("bar")
-        .style.width = "0%";
-
-    document.getElementById("total")
-        .textContent = "0";
-
-    document.getElementById("success")
-        .textContent = "0";
-
-    document.getElementById("fail")
-        .textContent = "0";
-
-    document.getElementById("rps")
-        .textContent = "0";
-
-    document.getElementById("avg")
-        .textContent = "0 ms";
-
-    document.getElementById("p95")
-        .textContent = "0 ms";
-
-    document.getElementById("testInfo")
-        .textContent =
-        "測試網址：\n" +
-        url +
-        "\n\n開始並發：" +
-        start +
-        "\n每階段增加：" +
-        step +
-        "\n最高並發：" +
-        max +
-        "\n每階段：" +
-        seconds +
-        " 秒";
-
-    let previousP95 = 0;
-
-    let detected = false;
-
-    for (
-        let concurrency = start;
-        concurrency <= max && running;
-        concurrency += step
-    ) {
-
-        document.getElementById("status")
-            .textContent =
-            "正在測試 " +
-            concurrency +
-            " 個並發";
-
-        const result =
-            await runStage(
-                url,
-                concurrency,
-                seconds
-            );
-
-        const errorRate =
-            result.total
-            ? result.fail / result.total
-            : 0;
-
-        let state = "正常";
-
-        if (
-            errorRate >= .10 ||
-            result.p95 >= 3000 ||
-            (
-                previousP95 > 0 &&
-                result.p95 >= previousP95 * 2
-            )
-        ) {
-
-            state = "開始退化";
-            detected = true;
-
-        }
-
-        addResult(result, state);
-
-        document.getElementById("rps")
-            .textContent =
-            result.rps.toFixed(2);
-
-        const progress =
-            Math.min(
-                100,
-                concurrency / max * 100
-            );
-
-        document.getElementById("bar")
-            .style.width =
-            progress + "%";
-
-        previousP95 =
-            result.p95;
-
-        if (detected) {
-
-            document.getElementById("message")
-                .innerHTML =
-                `<div class="warning">
-                    在 <b>${concurrency}</b>
-                    個並發時開始出現明顯退化。
-                    <br><br>
-                    這代表本次瀏覽器測試觀察到延遲或錯誤率明顯增加，
-                    不代表伺服器一定已經完全停止服務。
-                </div>`;
-
-            break;
-        }
-
-        await sleep(500);
-
-    }
-
-    running = false;
-
-    document.getElementById("startBtn")
-        .disabled = false;
-
-    document.getElementById("status")
-        .textContent =
-        "測試完成";
-
-    if (!detected) {
-
-        document.getElementById("message")
-            .innerHTML =
-            `<div class="good">
-                在設定的最高並發數內，
-                本次測試沒有偵測到明顯退化。
-            </div>`;
-
-    }
-
-    updateReports();
-
-}
-
 </script>
 
 </body>
