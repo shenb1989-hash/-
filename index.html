@@ -1,10 +1,10 @@
+
 <!DOCTYPE html>
 <html lang="zh-TW">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-
-<title>網站負載測試工具</title>
+<title>Webhook 訊息發送器</title>
 
 <style>
 * {
@@ -13,85 +13,93 @@
 
 body {
     margin: 0;
-    padding: 25px 15px;
-    background: #f4f6f8;
+    padding: 25px;
+    min-height: 100vh;
+    background: #0b1020;
+    color: #fff;
     font-family: Arial, sans-serif;
+    display: flex;
+    justify-content: center;
+    align-items: center;
 }
 
 .container {
-    max-width: 700px;
-    margin: auto;
-    background: #fff;
-    padding: 25px;
-    border-radius: 16px;
-    box-shadow: 0 5px 25px rgba(0,0,0,.08);
+    width: 100%;
+    max-width: 520px;
+    background: #151e32;
+    padding: 28px;
+    border-radius: 18px;
+    border: 1px solid #293750;
 }
 
 h2 {
     margin-top: 0;
+    text-align: center;
+}
+
+.description {
+    color: #9ba9c0;
+    text-align: center;
+    font-size: 13px;
+    margin-bottom: 25px;
 }
 
 label {
     display: block;
-    margin-top: 15px;
-    font-weight: bold;
+    margin: 15px 0 8px;
+    color: #cbd5e1;
+    font-size: 14px;
 }
 
-input {
+input, textarea {
     width: 100%;
-    padding: 11px;
-    margin-top: 6px;
-    border: 1px solid #ccc;
-    border-radius: 8px;
-    font-size: 15px;
+    padding: 13px;
+    border-radius: 9px;
+    border: 1px solid #34435d;
+    background: #0d1628;
+    color: white;
+    outline: none;
+    font-size: 14px;
+}
+
+textarea {
+    height: 150px;
+    resize: vertical;
+}
+
+input:focus, textarea:focus {
+    border-color: #648cff;
 }
 
 button {
-    margin-top: 20px;
-    padding: 12px 20px;
-    border: 0;
-    border-radius: 8px;
-    cursor: pointer;
-    font-size: 15px;
-}
-
-#start {
-    background: #222;
-    color: white;
-}
-
-#stop {
-    background: #ddd;
-    margin-left: 8px;
-}
-
-.stats {
-    margin-top: 20px;
-    padding: 15px;
-    background: #f5f5f5;
-    border-radius: 10px;
-    line-height: 2;
-}
-
-.progress {
-    margin-top: 20px;
     width: 100%;
-    height: 12px;
-    background: #ddd;
-    border-radius: 20px;
-    overflow: hidden;
+    padding: 14px;
+    margin-top: 18px;
+    border: none;
+    border-radius: 9px;
+    background: #5865f2;
+    color: white;
+    font-size: 15px;
+    font-weight: bold;
+    cursor: pointer;
 }
 
-.progressBar {
-    height: 100%;
-    width: 0%;
-    background: #222;
-    transition: width .1s;
+button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.clear {
+    background: #293750;
 }
 
 #status {
-    margin-top: 15px;
-    font-weight: bold;
+    margin-top: 18px;
+    padding: 12px;
+    border-radius: 8px;
+    text-align: center;
+    font-size: 13px;
+    display: none;
 }
 </style>
 </head>
@@ -100,307 +108,118 @@ button {
 
 <div class="container">
 
-<h2>網站負載測試工具</h2>
+    <h2>Webhook 訊息發送器</h2>
 
-<label>測試網址</label>
-<input
-    id="url"
-    type="url"
-    placeholder="https://example.com"
->
-
-<label>最大請求數</label>
-<input
-    id="maxRequests"
-    type="number"
-    min="1"
-    max="10000"
-    value="1000"
->
-
-<label>測試時間（秒）</label>
-<input
-    id="duration"
-    type="number"
-    min="1"
-    max="300"
-    value="30"
->
-
-<label>併發數</label>
-<input
-    id="concurrency"
-    type="number"
-    min="1"
-    max="50"
-    value="10"
->
-
-<label>每批間隔（毫秒）</label>
-<input
-    id="interval"
-    type="number"
-    min="0"
-    max="10000"
-    value="100"
->
-
-<br>
-
-<button id="start" onclick="startTest()">
-開始測試
-</button>
-
-<button id="stop" onclick="stopTest()">
-停止測試
-</button>
-
-<div class="progress">
-    <div id="progressBar" class="progressBar"></div>
-</div>
-
-<div class="stats">
-
-    <div>
-        已發送：
-        <span id="sent">0</span>
+    <div class="description">
+        輸入訊息，直接發送至指定的群組聊天室
     </div>
 
-    <div>
-        成功：
-        <span id="success">0</span>
-    </div>
+    <label for="webhook">Webhook URL</label>
+    <input
+        type="password"
+        id="webhook"
+        placeholder="貼上你的 Discord Webhook"
+        autocomplete="off"
+    >
 
-    <div>
-        失敗：
-        <span id="failed">0</span>
-    </div>
+    <label for="message">訊息內容</label>
+    <textarea
+        id="message"
+        placeholder="輸入你想發送的訊息..."
+    ></textarea>
 
-    <div>
-        RPS：
-        <span id="rps">0</span>
-    </div>
+    <button id="sendBtn" onclick="sendMessage()">
+        發送訊息
+    </button>
 
-    <div>
-        剩餘時間：
-        <span id="remaining">0</span> 秒
-    </div>
+    <button class="clear" onclick="clearMessage()">
+        清空內容
+    </button>
 
-</div>
-
-<div id="status">
-    尚未開始
-</div>
+    <div id="status"></div>
 
 </div>
 
 <script>
+const webhookInput = document.getElementById("webhook");
+const messageInput = document.getElementById("message");
+const sendBtn = document.getElementById("sendBtn");
+const statusBox = document.getElementById("status");
 
-let running = false;
+// 載入上次使用的 Webhook
+webhookInput.value = sessionStorage.getItem("webhook") || "";
 
-let sent = 0;
-let success = 0;
-let failed = 0;
-
-let startTime = 0;
-let endTime = 0;
-
-async function startTest() {
-
-    if (running) return;
-
-    const url =
-        document.getElementById("url").value.trim();
-
-    const maxRequests =
-        Number(document.getElementById("maxRequests").value);
-
-    const duration =
-        Number(document.getElementById("duration").value);
-
-    const concurrency =
-        Number(document.getElementById("concurrency").value);
-
-    const interval =
-        Number(document.getElementById("interval").value);
-
-    if (!url) {
-        alert("請輸入測試網址");
-        return;
-    }
-
-    if (
-        maxRequests <= 0 ||
-        duration <= 0 ||
-        concurrency <= 0 ||
-        interval < 0
-    ) {
-        alert("請確認測試參數");
-        return;
-    }
-
-    running = true;
-
-    sent = 0;
-    success = 0;
-    failed = 0;
-
-    startTime = Date.now();
-
-    endTime =
-        startTime +
-        duration * 1000;
-
-    document.getElementById("status").textContent =
-        "測試進行中...";
-
-    updateUI();
-
-    while (
-        running &&
-        sent < maxRequests &&
-        Date.now() < endTime
-    ) {
-
-        const batchSize =
-            Math.min(
-                concurrency,
-                maxRequests - sent
-            );
-
-        const requests = [];
-
-        for (let i = 0; i < batchSize; i++) {
-
-            requests.push(sendRequest(url));
-
-        }
-
-        await Promise.all(requests);
-
-        updateUI();
-
-        if (!running) break;
-
-        if (interval > 0) {
-
-            await sleep(interval);
-
-        }
-    }
-
-    running = false;
-
-    updateUI();
-
-    document.getElementById("status").textContent =
-        "測試完成";
+function showStatus(message, success) {
+    statusBox.style.display = "block";
+    statusBox.textContent = message;
+    statusBox.style.background = success ? "#123b2b" : "#472323";
+    statusBox.style.color = success ? "#72e6a7" : "#ff9999";
 }
 
+async function sendMessage() {
+    const webhook = webhookInput.value.trim();
+    const message = messageInput.value.trim();
 
-async function sendRequest(url) {
-
-    if (!running) return;
-
-    sent++;
+    if (!webhook || !message) {
+        showStatus("請輸入 Webhook URL 和訊息內容", false);
+        return;
+    }
 
     try {
+        const url = new URL(webhook);
 
-        const response =
-            await fetch(url, {
-                method: "GET",
-                cache: "no-store"
-            });
+        if (
+            url.protocol !== "https:" ||
+            url.hostname !== "discord.com" ||
+            !/^\/api\/webhooks\/\d+\/[^/]+\/?$/.test(url.pathname)
+        ) {
+            showStatus("Webhook URL 格式不正確", false);
+            return;
+        }
+    } catch {
+        showStatus("Webhook URL 格式不正確", false);
+        return;
+    }
 
-        if (response.ok) {
+    sendBtn.disabled = true;
+    sendBtn.textContent = "發送中...";
 
-            success++;
+    try {
+        const response = await fetch(webhook, {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json"
+            },
+            body: JSON.stringify({
+                content: message
+            })
+        });
 
-        } else {
-
-            failed++;
-
+        if (!response.ok) {
+            throw new Error("HTTP " + response.status);
         }
 
+        sessionStorage.setItem("webhook", webhook);
+
+        showStatus("訊息發送成功！", true);
+        messageInput.value = "";
+
     } catch (error) {
-
-        failed++;
-
+        showStatus(
+            "發送失敗：" + error.message +
+            "，請檢查網路或 Webhook 設定。",
+            false
+        );
+    } finally {
+        sendBtn.disabled = false;
+        sendBtn.textContent = "發送訊息";
     }
 }
 
-
-function stopTest() {
-
-    if (!running) return;
-
-    running = false;
-
-    document.getElementById("status").textContent =
-        "已停止測試";
-
-    updateUI();
+function clearMessage() {
+    messageInput.value = "";
+    statusBox.style.display = "none";
 }
-
-
-function sleep(ms) {
-
-    return new Promise(resolve => {
-
-        setTimeout(resolve, ms);
-
-    });
-
-}
-
-
-function updateUI() {
-
-    const elapsed =
-        Math.max(
-            0.001,
-            (Date.now() - startTime) / 1000
-        );
-
-    const remaining =
-        Math.max(
-            0,
-            (endTime - Date.now()) / 1000
-        );
-
-    const rps =
-        sent / elapsed;
-
-    const maxRequests =
-        Number(
-            document.getElementById("maxRequests").value
-        );
-
-    const progress =
-        Math.min(
-            100,
-            (sent / maxRequests) * 100
-        );
-
-    document.getElementById("sent").textContent =
-        sent;
-
-    document.getElementById("success").textContent =
-        success;
-
-    document.getElementById("failed").textContent =
-        failed;
-
-    document.getElementById("rps").textContent =
-        rps.toFixed(2);
-
-    document.getElementById("remaining").textContent =
-        remaining.toFixed(1);
-
-    document.getElementById("progressBar").style.width =
-        progress + "%";
-}
-
 </script>
 
 </body>
